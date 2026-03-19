@@ -549,8 +549,10 @@ export class GameScene extends Phaser.Scene {
 
     this.registry.set("gameOver", true);
 
+    const centerX = GAME_WIDTH * 0.5;
+
     this.add
-      .text(480, 200, "GAME OVER", {
+      .text(centerX, 200, "GAME OVER", {
         fontFamily: "Trebuchet MS",
         fontSize: "52px",
         color: "#341313",
@@ -559,7 +561,7 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(480, 255, "Refresh page to restart", {
+      .text(centerX, 255, "Refresh page to restart", {
         fontFamily: "Trebuchet MS",
         fontSize: "20px",
         color: "#4a2b2b",
@@ -609,7 +611,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   drawBackground() {
-    this.add.rectangle(480, 320, 960, 130, 0xb08f57, 0.5);
+    this.add.rectangle(
+      GAME_WIDTH * 0.5,
+      this.laneY,
+      GAME_WIDTH,
+      130,
+      0xb08f57,
+      0.5,
+    );
     this.add.rectangle(this.baseX, this.laneY, 48, 84, 0x4e4232);
 
     this.add

@@ -147,22 +147,52 @@ export class CombatSystem {
   }
 
   updateUnitAttacks(time, deltaSeconds) {
+    const rangeTolerance = 2;
+
     for (const unit of this.scene.units) {
       if (!unit.active || !unit.isAlive) {
         continue;
       }
 
-      const target = this.findNearestEnemy(unit.x, unit.range);
+      const target = this.findNearestEnemy(unit.x);
       if (!target) {
+        if (unit.body?.setVelocityX) {
+          unit.body.setVelocityX(0);
+        }
+        unit.setScale(1, 1);
         continue;
       }
 
-      const distance = Math.abs(target.x - unit.x);
-      if (distance > unit.range) {
-        const direction = target.x > unit.x ? 1 : -1;
-        unit.x += direction * unit.moveSpeed * deltaSeconds;
+      const dx = target.x - unit.x;
+      const distance = Math.abs(dx);
+      const inRange =
+        distance <= unit.range ||
+        Math.abs(distance - unit.range) < rangeTolerance;
+
+      if (!inRange) {
+        const direction = Math.sign(dx);
+        const moveStep = unit.moveSpeed * deltaSeconds;
+        const desiredX = target.x - direction * unit.range;
+        const distanceToDesired = Math.abs(desiredX - unit.x);
+
+        if (distanceToDesired <= moveStep) {
+          unit.x = desiredX;
+        } else {
+          unit.x += direction * moveStep;
+        }
+
+        this.orientUnit(unit, direction);
+        if (unit.body?.setVelocityX) {
+          unit.body.setVelocityX(direction * unit.moveSpeed);
+        }
+        unit.setScale(1.02, 1);
         continue;
       }
+
+      if (unit.body?.setVelocityX) {
+        unit.body.setVelocityX(0);
+      }
+      unit.setScale(1, 1);
 
       if (!unit.canAttack(time)) {
         continue;
@@ -191,6 +221,19 @@ export class CombatSystem {
         COMBAT_CONFIG.unitBulletColor,
       );
     }
+  }
+
+  orientUnit(unit, direction) {
+    if (direction === 0) {
+      return;
+    }
+
+    if (typeof unit.setFlipX === "function") {
+      unit.setFlipX(direction < 0);
+      return;
+    }
+
+    unit.scaleX = Math.abs(unit.scaleX || 1) * (direction < 0 ? -1 : 1);
   }
 
   updateEnemyAttacks(time) {
@@ -336,7 +379,7 @@ export class CombatSystem {
     enemy.destroy();
   }
 
-  findNearestEnemy(originX, range) {
+  findNearestEnemy(originX, range = Number.POSITIVE_INFINITY) {
     let nearest = null;
     let nearestDistance = Number.POSITIVE_INFINITY;
 
@@ -426,6 +469,7 @@ export class SkillSystem {
 
   castTornado() {
     const laneCenterY = this.scene.laneY;
+    const sceneWidth = this.scene.scale.width;
 
     for (const enemy of this.scene.enemies) {
       if (!enemy.active || !enemy.isAlive) {
@@ -440,9 +484,9 @@ export class SkillSystem {
     }
 
     const waveFx = this.scene.add.rectangle(
-      480,
+      sceneWidth * 0.5,
       laneCenterY,
-      880,
+      sceneWidth - 80,
       98,
       0xa7d9ff,
       0.28,

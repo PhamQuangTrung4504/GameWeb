@@ -1,5 +1,5 @@
-export const GAME_WIDTH = 960;
-export const GAME_HEIGHT = 540;
+export const GAME_WIDTH = 1600;
+export const GAME_HEIGHT = 680;
 
 export const BASE_HP = 10;
 export const LANE_Y = 320;
@@ -165,6 +165,10 @@ export function buildGameConfig(GameScene, UIScene) {
     parent: "game-root",
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+    },
     backgroundColor: "#d8c69d",
     physics: {
       default: "arcade",
