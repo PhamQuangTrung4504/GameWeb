@@ -139,19 +139,32 @@ export class CombatSystem {
   }
 
   update(time, deltaMs) {
-    this.updateUnitAttacks(time);
+    const deltaSeconds = deltaMs / 1000;
+    this.updateEnemyAttacks(time);
+    this.updateUnitAttacks(time, deltaSeconds);
     this.updatePlayerAttack(time);
-    this.updateBullets(deltaMs / 1000);
+    this.updateBullets(deltaSeconds);
   }
 
-  updateUnitAttacks(time) {
+  updateUnitAttacks(time, deltaSeconds) {
     for (const unit of this.scene.units) {
-      if (!unit.active) {
+      if (!unit.active || !unit.isAlive) {
         continue;
       }
 
       const target = this.findNearestEnemy(unit.x, unit.range);
-      if (!target || !unit.canAttack(time)) {
+      if (!target) {
+        continue;
+      }
+
+      const distance = Math.abs(target.x - unit.x);
+      if (distance > unit.range) {
+        const direction = target.x > unit.x ? 1 : -1;
+        unit.x += direction * unit.moveSpeed * deltaSeconds;
+        continue;
+      }
+
+      if (!unit.canAttack(time)) {
         continue;
       }
 
@@ -177,6 +190,31 @@ export class CombatSystem {
         unit.bulletSpeed,
         COMBAT_CONFIG.unitBulletColor,
       );
+    }
+  }
+
+  updateEnemyAttacks(time) {
+    for (const enemy of this.scene.enemies) {
+      if (!enemy.active || !enemy.isAlive) {
+        continue;
+      }
+
+      const target = this.findNearestDefenseTarget(enemy);
+      if (!target) {
+        continue;
+      }
+
+      const distance = Math.abs(enemy.x - target.x);
+      if (distance > enemy.attackRange) {
+        continue;
+      }
+
+      if (time < enemy.nextAttackAt) {
+        continue;
+      }
+
+      enemy.nextAttackAt = time + 1000 / enemy.attackSpeed;
+      this.applyDefenseDamage(target, enemy.attackDamage);
     }
   }
 
@@ -250,8 +288,7 @@ export class CombatSystem {
 
   applyDamage(enemy, damage) {
     const died = enemy.takeDamage(damage);
-    this.scene.showDamageText(enemy.x, enemy.y - 28, damage);
-    this.scene.playHitEffect(enemy);
+    this.scene.onEntityDamaged(enemy, damage);
 
     if (!died) {
       return;
@@ -265,11 +302,37 @@ export class CombatSystem {
     this.removeEnemy(enemy);
   }
 
+  applyDefenseDamage(target, damage) {
+    if (!target) {
+      return;
+    }
+
+    if (target.type === "base") {
+      this.scene.damageBase(damage);
+      this.scene.onBaseDamaged(damage);
+      return;
+    }
+
+    const died = target.takeDamage(damage);
+    this.scene.onEntityDamaged(target, damage);
+    if (!died) {
+      return;
+    }
+
+    if (target === this.scene.player) {
+      this.scene.onPlayerKilled();
+      return;
+    }
+
+    this.scene.removeUnit(target);
+  }
+
   removeEnemy(enemy) {
     const index = this.scene.enemies.indexOf(enemy);
     if (index >= 0) {
       this.scene.enemies.splice(index, 1);
     }
+    this.scene.destroyHealthBar(enemy);
     enemy.destroy();
   }
 
@@ -287,6 +350,42 @@ export class CombatSystem {
         nearest = enemy;
         nearestDistance = distance;
       }
+    }
+
+    return nearest;
+  }
+
+  findNearestDefenseTarget(enemy) {
+    let nearest = null;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+
+    for (const unit of this.scene.units) {
+      if (!unit.active || !unit.isAlive) {
+        continue;
+      }
+
+      const distance = Math.abs(enemy.x - unit.x);
+      if (
+        distance < nearestDistance ||
+        (distance === nearestDistance && nearest?.type !== "unit")
+      ) {
+        nearest = unit;
+        nearestDistance = distance;
+      }
+    }
+
+    const player = this.scene.player;
+    if (player && player.active && !player.isDead) {
+      const distance = Math.abs(enemy.x - player.x);
+      if (distance < nearestDistance) {
+        nearest = player;
+        nearestDistance = distance;
+      }
+    }
+
+    const baseDistance = Math.abs(enemy.x - this.scene.baseX);
+    if (baseDistance < nearestDistance) {
+      return { type: "base", x: this.scene.baseX, y: this.scene.laneY };
     }
 
     return nearest;

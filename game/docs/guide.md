@@ -116,6 +116,35 @@ Luu y: movement khong thay doi architecture, systems van chi xu ly luat game/com
   - `Melee Unit (RMB)` + cost
   - Neu khong du energy, text doi mau canh bao.
 
+# UI Visual Layer
+
+- UI dung shape co ban cua Phaser (`rectangle`) + `text`, khong dung thu vien UI ngoai.
+- Toan bo object UI duoc tao mot lan trong `UIScene.create()`.
+- `UIScene.update()` chi cap nhat property (text, mau, width bar, scale animation trigger).
+- HUD duoc chia zone ro rang:
+  - top-left: HP bar, Energy bar, Coin
+  - top-center: Wave
+  - right: Skill panel
+  - bottom: Unit cards + upgrade info
+- HP/Energy bar dung fill width co dinh theo ti le da normalize.
+
+# UI Performance Rules
+
+- Khong tao lai text/graphics/rectangle moi frame.
+- Khong tao tween lien tuc moi frame; animation wave chi kich hoat khi wave thay doi.
+- Feedback message chi hien 1 message tai 1 thoi diem, tween xong thi huy object.
+- Gia tri doc tu registry duoc clamp an toan truoc khi scale UI (HP >= 0, Energy >= 0).
+- Luon tranh chia cho 0 bang cach dat max value an toan khi tinh ti le bar.
+
+# UI Polish Pass
+
+- UI duoc tinh chinh nhe de tang do ro rang va tinh nhat quan.
+- Màu deploy card dua tren `energy` (khong dua tren `coin`).
+- HP/Energy bars ho tro max value dong (`maxHP`, `maxEnergy`) neu du lieu co trong registry.
+- Bar width cap nhat mem bang noi suy (`Phaser.Math.Linear`) de tranh giat.
+- Wave text van chi animate khi wave thay doi, bo sung alpha flash nhe.
+- Cac object UI van on dinh: tao trong `create()`, chi cap nhat property trong `update()`.
+
 # Player Feedback
 
 - UI truyen dat trang thai nang luong va kha nang dung skill theo thoi gian thuc.
@@ -161,6 +190,51 @@ Luu y: movement khong thay doi architecture, systems van chi xu ly luat game/com
 - So luong enemy moi wave tang dan theo nhip cham.
 - Coin reward va energy regen tang nhe theo wave de giu nhip progression.
 - Tranh exponential growth de khong bi overpower hoac impossible.
+
+# Health System
+
+- Tat ca entity co HP:
+  - `Base` (state trong `GameScene`)
+  - `Player`, `Unit`, `Enemy` (state trong instance)
+- Moi entity su dung cap gia tri `maxHp` va `currentHp`.
+- Sat thuong trong combat deu tru HP truoc khi xu ly death/removal.
+
+# Health Bars
+
+- Health bar cua entity duoc xu ly trong `GameScene` (khong trong `UIScene`).
+- Moi bar gom 2 rectangle:
+  - background (dark)
+  - fill (green)
+- Bar duoc tao 1 lan khi entity duoc khoi tao, sau do chi cap nhat vi tri + width.
+- Bar follow vi tri entity moi frame, origin `(0, 0.5)`, width thu nho tu trai sang phai.
+- Base co health bar lon co dinh gan vi tri base.
+
+# Player Respawn
+
+- Khi player HP ve 0:
+  - khong destroy player
+  - dat state dead (`isDead`), giam alpha, dung movement/attack
+- Sau 5 giay:
+  - respawn chinh object player cu
+  - hoi day HP
+  - dua ve vi tri gan base
+  - bat lai movement/attack
+
+# Unit Behavior
+
+- Unit tim enemy gan nhat.
+- Neu enemy ngoai tam: unit tu di chuyen ngang toi target.
+- Neu vao tam: unit dung lai va tan cong theo cooldown hien co.
+- Neu khong co enemy: unit idle.
+
+# Enemy Targeting
+
+- Enemy tan cong target phong thu gan nhat trong nhom:
+  - Unit
+  - Player
+  - Base
+- Uu tien khi bang khoang cach: `Unit > Player > Base`.
+- Enemy van co the gay sat thuong base, base HP ve 0 se trigger game over.
 
 # Performance Notes
 

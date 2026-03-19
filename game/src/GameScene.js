@@ -1,9 +1,12 @@
 import {
   BASE_HP,
   BASE_X,
+  GAME_HEIGHT,
   GAME_WIDTH,
+  MAX_ENERGY,
   ENEMY_SPAWN_X,
   LANE_Y,
+  PLAYER_RESPAWN_MS,
   PLAYER_SPEED,
   SKILL_CONFIG,
   PLAYER_STATS,
@@ -29,6 +32,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    this.baseMaxHp = BASE_HP;
     this.baseHp = BASE_HP;
     this.coin = STARTING_COIN;
     this.energy = STARTING_ENERGY;
@@ -49,6 +53,7 @@ export class GameScene extends Phaser.Scene {
 
     this.spawnUnit(UNIT_STATS.default.x, UNIT_TYPES.RANGED, true);
     this.player = new Player(this, PLAYER_STATS.x, this.laneY, PLAYER_STATS);
+    this.attachHealthBar(this.player, 52, 6, 0x2b2b2b, 0x36c55a, 44);
     this.playerDirection = 1;
     this.uiMessageId = 0;
 
@@ -73,6 +78,9 @@ export class GameScene extends Phaser.Scene {
     this.combatSystem = new CombatSystem(this);
     this.skillSystem = new SkillSystem(this);
     this.upgradeSystem = new UpgradeSystem();
+
+    this.rangedDeploySlots = [210, 290, 470, 550];
+    this.meleeDeploySlots = [250, 370, 510, 620];
 
     this.registry.set("skillCooldownMs", 0);
     this.registry.set("uiMessage", {
@@ -99,6 +107,8 @@ export class GameScene extends Phaser.Scene {
     this.resourceSystem.update(deltaMs);
     this.skillSystem.update(time);
     this.handleUpgradeInput();
+    this.updatePlayerRespawn(time);
+    this.updateEntityHealthBars();
     this.syncUiRegistry();
     this.updatePlayerMovement(deltaMs / 1000);
 
@@ -119,8 +129,10 @@ export class GameScene extends Phaser.Scene {
 
     this.registry.set("hp", this.baseHp);
     this.registry.set("baseHP", this.baseHp);
+    this.registry.set("maxHP", this.baseMaxHp);
     this.registry.set("coin", this.coin);
     this.registry.set("energy", this.energy);
+    this.registry.set("maxEnergy", MAX_ENERGY);
     this.registry.set("wave", this.wave);
     this.registry.set("skillCooldown", skillCooldownMs);
     this.registry.set("skillReady", skillReady);
@@ -128,6 +140,7 @@ export class GameScene extends Phaser.Scene {
     this.registry.set("meleeLevel", this.meleeLevel);
     this.registry.set("upgradeCostRanged", upgradeCostRanged);
     this.registry.set("upgradeCostMelee", upgradeCostMelee);
+    this.registry.set("gameOver", this.isGameOver);
   }
 
   getUnitLevel(unitType) {
@@ -205,7 +218,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   updatePlayerMovement(deltaSeconds) {
-    if (!this.player || !this.player.active) {
+    if (!this.player || !this.player.active || this.player.isDead) {
       return;
     }
 
@@ -246,12 +259,34 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const deployX = Phaser.Math.Clamp(pointer.x, 150, GAME_WIDTH - 160);
-    const deployType = pointer.rightButtonDown()
-      ? UNIT_TYPES.MELEE
-      : UNIT_TYPES.RANGED;
+    const panelTopY = GAME_HEIGHT - UI_CONFIG.panelHeight;
+    if (pointer.y < panelTopY) {
+      return;
+    }
 
+    let deployType = null;
+    if (pointer.x < GAME_WIDTH * 0.33) {
+      deployType = UNIT_TYPES.RANGED;
+    } else if (pointer.x < GAME_WIDTH * 0.66) {
+      deployType = UNIT_TYPES.MELEE;
+    } else {
+      return;
+    }
+
+    const deployX = this.getNextDeployX(deployType);
     this.spawnUnit(deployX, deployType, false);
+  }
+
+  getNextDeployX(unitType) {
+    const slots =
+      unitType === UNIT_TYPES.MELEE
+        ? this.meleeDeploySlots
+        : this.rangedDeploySlots;
+    const existingCount = this.units.filter(
+      (unit) => unit.active && unit.unitType === unitType,
+    ).length;
+
+    return slots[existingCount % slots.length];
   }
 
   spawnUnit(x, unitType, free = false) {
@@ -279,6 +314,8 @@ export class GameScene extends Phaser.Scene {
       unit = new Unit(this, x, this.laneY, UNIT_STATS.default);
     }
 
+    this.attachHealthBar(unit, 40, 6, 0x2b2b2b, 0x36c55a, 38);
+
     this.units.push(unit);
     return unit;
   }
@@ -289,6 +326,7 @@ export class GameScene extends Phaser.Scene {
       enemy.move(deltaSeconds);
 
       if (enemy.x <= this.baseX) {
+        this.destroyHealthBar(enemy);
         enemy.destroy();
         this.enemies.splice(i, 1);
         this.damageBase(1);
@@ -302,7 +340,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   addEnergy(amount) {
-    this.energy = Math.max(0, this.energy + amount);
+    this.energy = Phaser.Math.Clamp(this.energy + amount, 0, MAX_ENERGY);
     this.registry.set("energy", this.energy);
   }
 
@@ -320,6 +358,185 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  onBaseDamaged(damage) {
+    this.showDamageText(this.baseX + 6, this.laneY - 62, damage, "#f2d4d4", 14);
+    this.flashObject(this.baseBarFill);
+  }
+
+  onEntityDamaged(entity, damage) {
+    if (!entity || !entity.active) {
+      return;
+    }
+
+    this.showDamageText(entity.x, entity.y - 36, damage);
+    this.flashObject(entity);
+    this.flashObject(entity.healthBarFill);
+  }
+
+  removeUnit(unit) {
+    if (!unit) {
+      return;
+    }
+
+    const index = this.units.indexOf(unit);
+    if (index >= 0) {
+      this.units.splice(index, 1);
+    }
+
+    this.destroyHealthBar(unit);
+    unit.destroy();
+  }
+
+  onPlayerKilled() {
+    if (this.player.isDead && this.player.respawnAt > 0) {
+      return;
+    }
+
+    this.player.isDead = true;
+    this.player.respawnAt = this.time.now + PLAYER_RESPAWN_MS;
+    this.player.alpha = 0.4;
+    this.pushUiMessage(
+      "Player down - respawning",
+      this.player.x,
+      this.player.y - 98,
+      "#f4d98c",
+    );
+  }
+
+  updatePlayerRespawn(time) {
+    if (
+      !this.player.isDead ||
+      this.player.respawnAt <= 0 ||
+      time < this.player.respawnAt
+    ) {
+      return;
+    }
+
+    this.player.respawn(this.baseX + 120, this.laneY);
+    this.pushUiMessage(
+      "Player respawned",
+      this.player.x,
+      this.player.y - 98,
+      UI_CONFIG.readyColor,
+    );
+  }
+
+  attachHealthBar(entity, width, height, bgColor, fillColor, offsetY) {
+    entity.healthBarOffsetY = offsetY;
+    entity.healthBarWidth = width;
+
+    entity.healthBarBg = this.add
+      .rectangle(
+        entity.x - width * 0.5,
+        entity.y - offsetY,
+        width,
+        height,
+        bgColor,
+        0.9,
+      )
+      .setOrigin(0, 0.5)
+      .setDepth(40);
+
+    entity.healthBarFill = this.add
+      .rectangle(
+        entity.x - width * 0.5,
+        entity.y - offsetY,
+        width,
+        height,
+        fillColor,
+        1,
+      )
+      .setOrigin(0, 0.5)
+      .setDepth(41);
+  }
+
+  destroyHealthBar(entity) {
+    if (entity.healthBarBg) {
+      entity.healthBarBg.destroy();
+      entity.healthBarBg = null;
+    }
+
+    if (entity.healthBarFill) {
+      entity.healthBarFill.destroy();
+      entity.healthBarFill = null;
+    }
+  }
+
+  updateEntityHealthBars() {
+    this.updateBarFor(this.player, this.player.currentHp, this.player.maxHp);
+
+    for (const unit of this.units) {
+      this.updateBarFor(unit, unit.currentHp, unit.maxHp);
+    }
+
+    for (const enemy of this.enemies) {
+      if (!enemy.healthBarBg) {
+        this.attachHealthBar(enemy, 32, 5, 0x2b2b2b, 0x36c55a, 34);
+      }
+
+      this.updateBarFor(enemy, enemy.currentHp, enemy.maxHp);
+    }
+
+    if (!this.baseBarBg) {
+      const width = 120;
+      this.baseBarBg = this.add
+        .rectangle(this.baseX - 14, this.laneY - 62, width, 10, 0x2b2b2b, 0.95)
+        .setOrigin(0, 0.5)
+        .setDepth(42);
+      this.baseBarFill = this.add
+        .rectangle(this.baseX - 14, this.laneY - 62, width, 10, 0x36c55a, 1)
+        .setOrigin(0, 0.5)
+        .setDepth(43);
+      this.baseBarWidth = width;
+    }
+
+    const ratio = Phaser.Math.Clamp(
+      this.baseHp / Math.max(1, this.baseMaxHp),
+      0,
+      1,
+    );
+    this.baseBarFill.width = this.baseBarWidth * ratio;
+  }
+
+  updateBarFor(entity, currentHp, maxHp) {
+    if (
+      !entity ||
+      !entity.active ||
+      !entity.healthBarBg ||
+      !entity.healthBarFill
+    ) {
+      return;
+    }
+
+    const leftX = entity.x - entity.healthBarWidth * 0.5;
+    const y = entity.y - entity.healthBarOffsetY;
+    const ratio = Phaser.Math.Clamp(currentHp / Math.max(1, maxHp), 0, 1);
+
+    entity.healthBarBg.x = leftX;
+    entity.healthBarBg.y = y;
+    entity.healthBarFill.x = leftX;
+    entity.healthBarFill.y = y;
+    entity.healthBarFill.width = entity.healthBarWidth * ratio;
+  }
+
+  flashObject(target) {
+    if (!target || !target.active) {
+      return;
+    }
+
+    if (target._flashTween && target._flashTween.isPlaying()) {
+      target._flashTween.stop();
+    }
+
+    target._flashTween = this.tweens.add({
+      targets: target,
+      alpha: 0.35,
+      yoyo: true,
+      duration: 80,
+      repeat: 0,
+    });
+  }
+
   endGame() {
     this.isGameOver = true;
     this.input.off("pointerdown", this.handleDeployInput, this);
@@ -329,6 +546,8 @@ export class GameScene extends Phaser.Scene {
       this.bullets[i].destroy();
       this.bullets.splice(i, 1);
     }
+
+    this.registry.set("gameOver", true);
 
     this.add
       .text(480, 200, "GAME OVER", {
@@ -399,19 +618,6 @@ export class GameScene extends Phaser.Scene {
         fontSize: "12px",
         color: "#f3e6c9",
       })
-      .setDepth(10);
-
-    this.add
-      .text(
-        16,
-        512,
-        `LMB: Ranged unit | RMB: Melee unit | 1: Upgrade ranged | 2: Upgrade melee | ${SKILL_CONFIG.key}: Tornado`,
-        {
-          fontFamily: "Trebuchet MS",
-          fontSize: "13px",
-          color: "#4a3c2d",
-        },
-      )
       .setDepth(10);
   }
 }

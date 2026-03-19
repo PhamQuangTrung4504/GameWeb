@@ -3,8 +3,14 @@ import { ENEMY_STATS, UNIT_STATS, UNIT_TYPES } from "./config.js";
 export class Enemy extends Phaser.GameObjects.Rectangle {
   constructor(scene, x, y, stats = {}) {
     super(scene, x, y, 34, 48, stats.color ?? ENEMY_STATS.normal.color);
-    this.hp = stats.hp ?? 28;
+    this.maxHp = stats.maxHp ?? stats.hp ?? 28;
+    this.currentHp = this.maxHp;
+    this.hp = this.currentHp;
     this.speed = stats.speed ?? 48;
+    this.attackDamage = stats.attackDamage ?? ENEMY_STATS.normal.attackDamage;
+    this.attackRange = stats.attackRange ?? ENEMY_STATS.normal.attackRange;
+    this.attackSpeed = stats.attackSpeed ?? ENEMY_STATS.normal.attackSpeed;
+    this.nextAttackAt = 0;
     this.rewardCoin = stats.rewardCoin ?? ENEMY_STATS.normal.rewardCoin;
     this.enemyType = stats.enemyType ?? "normal";
     this.isAlive = true;
@@ -21,8 +27,11 @@ export class Enemy extends Phaser.GameObjects.Rectangle {
       return false;
     }
 
-    this.hp -= amount;
-    if (this.hp <= 0) {
+    this.currentHp -= amount;
+    this.hp = this.currentHp;
+    if (this.currentHp <= 0) {
+      this.currentHp = 0;
+      this.hp = 0;
       this.isAlive = false;
       return true;
     }
@@ -65,11 +74,15 @@ export class Unit extends Phaser.GameObjects.Rectangle {
   constructor(scene, x, y, stats = {}) {
     super(scene, x, y, 40, 52, stats.color ?? UNIT_STATS.default.color);
     this.unitType = stats.unitType ?? UNIT_TYPES.RANGED;
+    this.maxHp = stats.maxHp ?? UNIT_STATS.default.maxHp;
+    this.currentHp = this.maxHp;
     this.range = stats.range ?? UNIT_STATS.default.range;
     this.damage = stats.damage ?? UNIT_STATS.default.damage;
     this.attackSpeed = stats.attackSpeed ?? UNIT_STATS.default.attackSpeed;
     this.bulletSpeed = stats.bulletSpeed ?? UNIT_STATS.default.bulletSpeed;
+    this.moveSpeed = stats.moveSpeed ?? UNIT_STATS.default.moveSpeed;
     this.nextAttackAt = 0;
+    this.isAlive = true;
 
     scene.add.existing(this);
   }
@@ -80,6 +93,21 @@ export class Unit extends Phaser.GameObjects.Rectangle {
 
   consumeAttack(time) {
     this.nextAttackAt = time + 1000 / this.attackSpeed;
+  }
+
+  takeDamage(amount) {
+    if (!this.isAlive) {
+      return false;
+    }
+
+    this.currentHp -= amount;
+    if (this.currentHp <= 0) {
+      this.currentHp = 0;
+      this.isAlive = false;
+      return true;
+    }
+
+    return false;
   }
 }
 
@@ -106,6 +134,8 @@ export class RangedUnit extends Unit {
 export class Player extends Phaser.GameObjects.Rectangle {
   constructor(scene, x, y, stats = {}) {
     super(scene, x, y, 42, 60, 0x204c9a);
+    this.maxHp = stats.maxHp ?? 80;
+    this.currentHp = this.maxHp;
     this.moveSpeed = stats.moveSpeed ?? 220;
     this.meleeRange = stats.meleeRange ?? 70;
     this.rangedRange = stats.rangedRange ?? 260;
@@ -114,11 +144,17 @@ export class Player extends Phaser.GameObjects.Rectangle {
     this.attackSpeed = stats.attackSpeed ?? 1.5;
     this.nextAttackAt = 0;
     this.facing = 1;
+    this.isDead = false;
+    this.respawnAt = 0;
 
     scene.add.existing(this);
   }
 
   canAttack(time) {
+    if (this.isDead) {
+      return false;
+    }
+
     return time >= this.nextAttackAt;
   }
 
@@ -130,6 +166,30 @@ export class Player extends Phaser.GameObjects.Rectangle {
     this.facing = value ? -1 : 1;
     this.scaleX = Math.abs(this.scaleX) * this.facing;
     return this;
+  }
+
+  takeDamage(amount) {
+    if (this.isDead) {
+      return false;
+    }
+
+    this.currentHp -= amount;
+    if (this.currentHp <= 0) {
+      this.currentHp = 0;
+      this.isDead = true;
+      return true;
+    }
+
+    return false;
+  }
+
+  respawn(x, y) {
+    this.currentHp = this.maxHp;
+    this.isDead = false;
+    this.respawnAt = 0;
+    this.x = x;
+    this.y = y;
+    this.alpha = 1;
   }
 }
 

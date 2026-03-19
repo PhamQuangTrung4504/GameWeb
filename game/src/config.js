@@ -5,11 +5,14 @@ export const BASE_HP = 10;
 export const LANE_Y = 320;
 export const BASE_X = 60;
 export const ENEMY_SPAWN_X = GAME_WIDTH - 30;
+export const MAX_ENERGY = 10;
 
 export const STARTING_COIN = 0;
 export const STARTING_ENERGY = 0;
 
 export const UNIT_DEPLOY_COST = 3;
+export const UNIT_HP = 36;
+export const UNIT_MOVE_SPEED = 80;
 
 export const UNIT_STATS = {
   default: {
@@ -18,6 +21,8 @@ export const UNIT_STATS = {
     damage: 10,
     attackSpeed: 1.2,
     bulletSpeed: 320,
+    moveSpeed: UNIT_MOVE_SPEED,
+    maxHp: UNIT_HP,
     color: 0x2a8f3a,
   },
   melee: {
@@ -26,6 +31,8 @@ export const UNIT_STATS = {
     damage: 18,
     attackSpeed: 1.1,
     bulletSpeed: 0,
+    moveSpeed: UNIT_MOVE_SPEED,
+    maxHp: UNIT_HP + 10,
     color: 0x3a7f2a,
   },
   ranged: {
@@ -34,6 +41,8 @@ export const UNIT_STATS = {
     damage: 11,
     attackSpeed: 1.25,
     bulletSpeed: 330,
+    moveSpeed: UNIT_MOVE_SPEED,
+    maxHp: UNIT_HP,
     color: 0x2a8f3a,
   },
 };
@@ -44,14 +53,17 @@ export const UNIT_TYPES = {
 };
 
 export const PLAYER_SPEED = 240;
+export const PLAYER_HP = 80;
 export const PLAYER_MELEE_RANGE = 58;
 export const PLAYER_RANGED_RANGE = 335;
 export const PLAYER_MELEE_DAMAGE = 22;
 export const PLAYER_RANGED_DAMAGE = 9;
+export const PLAYER_RESPAWN_MS = 5000;
 
 export const PLAYER_STATS = {
   x: 380,
   moveSpeed: PLAYER_SPEED,
+  maxHp: PLAYER_HP,
   meleeRange: PLAYER_MELEE_RANGE,
   rangedRange: PLAYER_RANGED_RANGE,
   meleeDamage: PLAYER_MELEE_DAMAGE,
@@ -59,22 +71,36 @@ export const PLAYER_STATS = {
   attackSpeed: 1.6,
 };
 
+export const ENEMY_HP = 28;
+export const ENEMY_DAMAGE = 1;
+export const ENEMY_ATTACK_RANGE = 28;
+export const ENEMY_ATTACK_SPEED = 1;
+
 export const ENEMY_STATS = {
   normal: {
-    hp: 28,
+    hp: ENEMY_HP,
     speed: 48,
+    attackDamage: ENEMY_DAMAGE,
+    attackRange: ENEMY_ATTACK_RANGE,
+    attackSpeed: ENEMY_ATTACK_SPEED,
     color: 0x7b1f1f,
     rewardCoin: 1,
   },
   fast: {
     hp: 16,
     speed: 76,
+    attackDamage: ENEMY_DAMAGE,
+    attackRange: ENEMY_ATTACK_RANGE,
+    attackSpeed: ENEMY_ATTACK_SPEED * 1.15,
     color: 0xb6452a,
     rewardCoin: 1,
   },
   tank: {
     hp: 62,
     speed: 28,
+    attackDamage: ENEMY_DAMAGE + 1,
+    attackRange: ENEMY_ATTACK_RANGE + 8,
+    attackSpeed: ENEMY_ATTACK_SPEED * 0.85,
     color: 0x4a1226,
     rewardCoin: 2,
   },
