@@ -14,12 +14,73 @@ export class Enemy extends Phaser.GameObjects.Rectangle {
     this.rewardCoin = stats.rewardCoin ?? ENEMY_STATS.normal.rewardCoin;
     this.enemyType = stats.enemyType ?? "normal";
     this.isAlive = true;
+    this.setVisible(false);
+    this.visual = this.createVisual(scene, x, y, this.enemyType);
+    this.playMove();
 
     scene.add.existing(this);
   }
 
+  createVisual(scene, x, y, enemyType) {
+    const textureKey = enemyType === "tank" ? "enemy-zombie2" : "enemy-zombie1";
+    if (!scene.textures.exists(textureKey)) {
+      return null;
+    }
+
+    const sprite = scene.add
+      .sprite(x, y, textureKey)
+      .setOrigin(0.5, 1)
+      .setDepth(15)
+      .setDisplaySize(78, 96);
+    return sprite;
+  }
+
+  syncVisual() {
+    if (!this.visual) {
+      return;
+    }
+
+    this.visual.x = this.x;
+    this.visual.y = this.y + 24;
+  }
+
+  playMove() {
+    if (!this.visual) {
+      return;
+    }
+
+    const key =
+      this.enemyType === "tank" ? "enemy-zombie2-move" : "enemy-zombie1-move";
+    if (this.visual.anims.currentAnim?.key !== key) {
+      this.visual.play(key, true);
+    }
+  }
+
+  playAttack() {
+    if (!this.visual) {
+      return;
+    }
+
+    const key =
+      this.enemyType === "tank"
+        ? "enemy-zombie2-attack"
+        : "enemy-zombie1-attack";
+    this.visual.play(key, true);
+  }
+
+  setFlipX(value) {
+    this.scaleX = Math.abs(this.scaleX) * (value ? -1 : 1);
+    if (this.visual) {
+      this.visual.setFlipX(value);
+    }
+
+    return this;
+  }
+
   move(deltaSeconds) {
     this.x -= this.speed * deltaSeconds;
+    this.playMove();
+    this.syncVisual();
   }
 
   takeDamage(amount) {
@@ -37,6 +98,15 @@ export class Enemy extends Phaser.GameObjects.Rectangle {
     }
 
     return false;
+  }
+
+  destroy(fromScene) {
+    if (this.visual) {
+      this.visual.destroy();
+      this.visual = null;
+    }
+
+    super.destroy(fromScene);
   }
 }
 
@@ -83,8 +153,86 @@ export class Unit extends Phaser.GameObjects.Rectangle {
     this.moveSpeed = stats.moveSpeed ?? UNIT_STATS.default.moveSpeed;
     this.nextAttackAt = 0;
     this.isAlive = true;
+    this.setVisible(false);
+    this.visual = this.createVisual(scene, x, y, this.unitType);
+    this.playIdle();
 
     scene.add.existing(this);
+  }
+
+  createVisual(scene, x, y, unitType) {
+    const textureKey =
+      unitType === UNIT_TYPES.MELEE ? "unit-soldier2" : "unit-soldier1";
+    if (!scene.textures.exists(textureKey)) {
+      return null;
+    }
+
+    const sprite = scene.add
+      .sprite(x, y, textureKey)
+      .setOrigin(0.5, 1)
+      .setDepth(16)
+      .setDisplaySize(78, 96);
+    return sprite;
+  }
+
+  syncVisual() {
+    if (!this.visual) {
+      return;
+    }
+
+    this.visual.x = this.x;
+    this.visual.y = this.y + 26;
+  }
+
+  playIdle() {
+    if (!this.visual) {
+      return;
+    }
+
+    const key =
+      this.unitType === UNIT_TYPES.MELEE
+        ? "unit-soldier2-move"
+        : "unit-soldier1-move";
+    if (
+      this.visual.anims.currentAnim?.key !== key ||
+      !this.visual.anims.isPlaying
+    ) {
+      this.visual.play(key, true);
+      this.visual.anims.pause(this.visual.anims.currentFrame);
+    }
+  }
+
+  playMove() {
+    if (!this.visual) {
+      return;
+    }
+
+    const key =
+      this.unitType === UNIT_TYPES.MELEE
+        ? "unit-soldier2-move"
+        : "unit-soldier1-move";
+    this.visual.play(key, true);
+  }
+
+  playAttack() {
+    if (!this.visual) {
+      return;
+    }
+
+    const key =
+      this.unitType === UNIT_TYPES.MELEE
+        ? "unit-soldier2-attack"
+        : "unit-soldier1-attack";
+    this.visual.play(key, true);
+  }
+
+  setFlipX(value) {
+    this.scaleX = Math.abs(this.scaleX) * (value ? -1 : 1);
+    if (this.visual) {
+      this.visual.setFlipX(value);
+    }
+
+    return this;
   }
 
   canAttack(time) {
@@ -108,6 +256,15 @@ export class Unit extends Phaser.GameObjects.Rectangle {
     }
 
     return false;
+  }
+
+  destroy(fromScene) {
+    if (this.visual) {
+      this.visual.destroy();
+      this.visual = null;
+    }
+
+    super.destroy(fromScene);
   }
 }
 
@@ -146,8 +303,82 @@ export class Player extends Phaser.GameObjects.Rectangle {
     this.facing = 1;
     this.isDead = false;
     this.respawnAt = 0;
+    this.actionState = "idle";
+    this.actionLockUntil = 0;
+    this.setVisible(false);
+    this.visual = this.createVisual(scene, x, y);
+    this.playIdle();
 
     scene.add.existing(this);
+  }
+
+  createVisual(scene, x, y) {
+    if (!scene.textures.exists("player-main")) {
+      return null;
+    }
+
+    return scene.add
+      .sprite(x, y, "player-main")
+      .setOrigin(0.5, 1)
+      .setDepth(18)
+      .setDisplaySize(114, 142);
+  }
+
+  syncVisual() {
+    if (!this.visual) {
+      return;
+    }
+
+    this.visual.x = this.x;
+    this.visual.y = this.y + 30;
+  }
+
+  playIdle() {
+    if (!this.visual) {
+      return;
+    }
+
+    if (this.scene.time.now < this.actionLockUntil) {
+      return;
+    }
+
+    this.actionState = "idle";
+    if (this.visual.anims.currentAnim?.key !== "player-main-idle") {
+      this.visual.play("player-main-idle", true);
+    }
+  }
+
+  playMove() {
+    if (!this.visual) {
+      return;
+    }
+
+    if (this.scene.time.now < this.actionLockUntil) {
+      return;
+    }
+
+    this.actionState = "move";
+    this.visual.play("player-main-move", true);
+  }
+
+  playAttackMelee(time = 0) {
+    if (!this.visual) {
+      return;
+    }
+
+    this.actionState = "attack-melee";
+    this.actionLockUntil = Math.max(this.actionLockUntil, time + 320);
+    this.visual.play("player-main-attack-melee", true);
+  }
+
+  playAttackRanged(time = 0) {
+    if (!this.visual) {
+      return;
+    }
+
+    this.actionState = "attack-ranged";
+    this.actionLockUntil = Math.max(this.actionLockUntil, time + 360);
+    this.visual.play("player-main-attack-ranged", true);
   }
 
   canAttack(time) {
@@ -165,6 +396,9 @@ export class Player extends Phaser.GameObjects.Rectangle {
   setFlipX(value) {
     this.facing = value ? -1 : 1;
     this.scaleX = Math.abs(this.scaleX) * this.facing;
+    if (this.visual) {
+      this.visual.setFlipX(value);
+    }
     return this;
   }
 
@@ -190,6 +424,22 @@ export class Player extends Phaser.GameObjects.Rectangle {
     this.x = x;
     this.y = y;
     this.alpha = 1;
+    this.actionState = "idle";
+    this.actionLockUntil = 0;
+    if (this.visual) {
+      this.visual.alpha = 1;
+    }
+    this.playIdle();
+    this.syncVisual();
+  }
+
+  destroy(fromScene) {
+    if (this.visual) {
+      this.visual.destroy();
+      this.visual = null;
+    }
+
+    super.destroy(fromScene);
   }
 }
 
@@ -199,8 +449,33 @@ export class Bullet extends Phaser.GameObjects.Arc {
     this.target = target;
     this.damage = stats.damage ?? 8;
     this.speed = stats.speed ?? 320;
+    this.textureKey = stats.textureKey ?? null;
+    this.setVisible(!this.textureKey);
+    this.visual = this.createVisual(scene, x, y, this.textureKey);
 
     scene.add.existing(this);
+  }
+
+  createVisual(scene, x, y, textureKey) {
+    if (!textureKey || !scene.textures.exists(textureKey)) {
+      return null;
+    }
+
+    const image = scene.add
+      .image(x, y, textureKey)
+      .setDepth(19)
+      .setDisplaySize(20, 20);
+
+    return image;
+  }
+
+  syncVisual() {
+    if (!this.visual) {
+      return;
+    }
+
+    this.visual.x = this.x;
+    this.visual.y = this.y;
   }
 
   move(deltaSeconds) {
@@ -213,6 +488,7 @@ export class Bullet extends Phaser.GameObjects.Arc {
     const distance = Math.hypot(dx, dy);
 
     if (distance < 1) {
+      this.syncVisual();
       return { shouldDestroy: true, hit: true };
     }
 
@@ -220,11 +496,25 @@ export class Bullet extends Phaser.GameObjects.Arc {
     if (step >= distance) {
       this.x = this.target.x;
       this.y = this.target.y;
+      this.syncVisual();
       return { shouldDestroy: true, hit: true };
     }
 
     this.x += (dx / distance) * step;
     this.y += (dy / distance) * step;
+    if (this.visual) {
+      this.visual.rotation = Math.atan2(dy, dx);
+    }
+    this.syncVisual();
     return { shouldDestroy: false, hit: false };
+  }
+
+  destroy(fromScene) {
+    if (this.visual) {
+      this.visual.destroy();
+      this.visual = null;
+    }
+
+    super.destroy(fromScene);
   }
 }

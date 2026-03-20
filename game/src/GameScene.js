@@ -31,7 +31,114 @@ export class GameScene extends Phaser.Scene {
     super("GameScene");
   }
 
+  preload() {
+    this.load.spritesheet("player-main", "assets/player/main_dung_im.png", {
+      frameWidth: 64,
+      frameHeight: 64,
+    });
+    this.load.spritesheet(
+      "player-main-move-sheet",
+      "assets/player/main_di_chuyen.png",
+      {
+        frameWidth: 64,
+        frameHeight: 64,
+      },
+    );
+    this.load.spritesheet(
+      "player-main-attack-melee-sheet",
+      "assets/player/main_attack_can_chien.png",
+      {
+        frameWidth: 64,
+        frameHeight: 64,
+      },
+    );
+    this.load.spritesheet(
+      "player-main-attack-ranged-sheet",
+      "assets/player/main_attack_tam_xa.png",
+      {
+        frameWidth: 64,
+        frameHeight: 64,
+      },
+    );
+
+    this.load.spritesheet(
+      "unit-soldier1",
+      "assets/unit/soidier1_di_chuyen.png",
+      {
+        frameWidth: 48,
+        frameHeight: 48,
+      },
+    );
+    this.load.spritesheet(
+      "unit-soldier1-attack-sheet",
+      "assets/unit/soldier1_attack.png",
+      {
+        frameWidth: 48,
+        frameHeight: 48,
+      },
+    );
+    this.load.spritesheet(
+      "unit-soldier2",
+      "assets/unit/soldier2_di_chuyen.png",
+      {
+        frameWidth: 48,
+        frameHeight: 48,
+      },
+    );
+    this.load.spritesheet(
+      "unit-soldier2-attack-sheet",
+      "assets/unit/soldier2_attack.png",
+      {
+        frameWidth: 48,
+        frameHeight: 48,
+      },
+    );
+
+    this.load.spritesheet(
+      "enemy-zombie1",
+      "assets/enemy/zombie1_di_chuyen.png",
+      {
+        frameWidth: 48,
+        frameHeight: 48,
+      },
+    );
+    this.load.spritesheet(
+      "enemy-zombie1-attack-sheet",
+      "assets/enemy/zombie1_attack.png",
+      {
+        frameWidth: 48,
+        frameHeight: 48,
+      },
+    );
+    this.load.spritesheet(
+      "enemy-zombie2",
+      "assets/enemy/zombie2_di_chuyen.png",
+      {
+        frameWidth: 48,
+        frameHeight: 48,
+      },
+    );
+    this.load.spritesheet(
+      "enemy-zombie2-attack-sheet",
+      "assets/enemy/zombie2_attack.png",
+      {
+        frameWidth: 48,
+        frameHeight: 48,
+      },
+    );
+
+    this.load.spritesheet("skill-tornado", "assets/skill/skill_loc_xoay.png", {
+      frameWidth: 48,
+      frameHeight: 48,
+    });
+
+    this.load.image("bullet-arrow", "assets/object/mui_ten.png");
+    this.load.image("bullet-stone", "assets/object/vien_dat_cua_soldier1.png");
+  }
+
   create() {
+    this.createAnimations();
+
     this.baseMaxHp = BASE_HP;
     this.baseHp = BASE_HP;
     this.coin = STARTING_COIN;
@@ -53,7 +160,7 @@ export class GameScene extends Phaser.Scene {
 
     this.spawnUnit(UNIT_STATS.default.x, UNIT_TYPES.RANGED, true);
     this.player = new Player(this, PLAYER_STATS.x, this.laneY, PLAYER_STATS);
-    this.attachHealthBar(this.player, 52, 6, 0x2b2b2b, 0x36c55a, 44);
+    this.attachHealthBar(this.player, 70, 8, 0x2b2b2b, 0x36c55a, 66);
     this.playerDirection = 1;
     this.uiMessageId = 0;
 
@@ -108,6 +215,7 @@ export class GameScene extends Phaser.Scene {
     this.skillSystem.update(time);
     this.handleUpgradeInput();
     this.updatePlayerRespawn(time);
+    this.player.syncVisual?.();
     this.updateEntityHealthBars();
     this.syncUiRegistry();
     this.updatePlayerMovement(deltaMs / 1000);
@@ -248,10 +356,14 @@ export class GameScene extends Phaser.Scene {
       }
 
       this.player.setScale(1.05, 1);
+      this.player.playMove?.();
+      this.player.syncVisual?.();
       return;
     }
 
     this.player.setScale(1, 1);
+    this.player.playIdle?.();
+    this.player.syncVisual?.();
   }
 
   handleDeployInput(pointer) {
@@ -314,7 +426,8 @@ export class GameScene extends Phaser.Scene {
       unit = new Unit(this, x, this.laneY, UNIT_STATS.default);
     }
 
-    this.attachHealthBar(unit, 40, 6, 0x2b2b2b, 0x36c55a, 38);
+    this.attachHealthBar(unit, 44, 7, 0x2b2b2b, 0x36c55a, 54);
+    unit.syncVisual?.();
 
     this.units.push(unit);
     return unit;
@@ -360,7 +473,6 @@ export class GameScene extends Phaser.Scene {
 
   onBaseDamaged(damage) {
     this.showDamageText(this.baseX + 6, this.laneY - 62, damage, "#f2d4d4", 14);
-    this.flashObject(this.baseBarFill);
   }
 
   onEntityDamaged(entity, damage) {
@@ -369,7 +481,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.showDamageText(entity.x, entity.y - 36, damage);
-    this.flashObject(entity);
+    this.flashObject(entity.visual ?? entity);
     this.flashObject(entity.healthBarFill);
   }
 
@@ -395,6 +507,9 @@ export class GameScene extends Phaser.Scene {
     this.player.isDead = true;
     this.player.respawnAt = this.time.now + PLAYER_RESPAWN_MS;
     this.player.alpha = 0.4;
+    if (this.player.visual) {
+      this.player.visual.alpha = 0.4;
+    }
     this.pushUiMessage(
       "Player down - respawning",
       this.player.x,
@@ -463,39 +578,22 @@ export class GameScene extends Phaser.Scene {
   }
 
   updateEntityHealthBars() {
+    this.player.syncVisual?.();
     this.updateBarFor(this.player, this.player.currentHp, this.player.maxHp);
 
     for (const unit of this.units) {
+      unit.syncVisual?.();
       this.updateBarFor(unit, unit.currentHp, unit.maxHp);
     }
 
     for (const enemy of this.enemies) {
+      enemy.syncVisual?.();
       if (!enemy.healthBarBg) {
-        this.attachHealthBar(enemy, 32, 5, 0x2b2b2b, 0x36c55a, 34);
+        this.attachHealthBar(enemy, 44, 7, 0x2b2b2b, 0x36c55a, 54);
       }
 
       this.updateBarFor(enemy, enemy.currentHp, enemy.maxHp);
     }
-
-    if (!this.baseBarBg) {
-      const width = 120;
-      this.baseBarBg = this.add
-        .rectangle(this.baseX - 14, this.laneY - 62, width, 10, 0x2b2b2b, 0.95)
-        .setOrigin(0, 0.5)
-        .setDepth(42);
-      this.baseBarFill = this.add
-        .rectangle(this.baseX - 14, this.laneY - 62, width, 10, 0x36c55a, 1)
-        .setOrigin(0, 0.5)
-        .setDepth(43);
-      this.baseBarWidth = width;
-    }
-
-    const ratio = Phaser.Math.Clamp(
-      this.baseHp / Math.max(1, this.baseMaxHp),
-      0,
-      1,
-    );
-    this.baseBarFill.width = this.baseBarWidth * ratio;
   }
 
   updateBarFor(entity, currentHp, maxHp) {
@@ -610,12 +708,239 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  playSkillFx(x, y) {
+    if (!this.textures.exists("skill-tornado")) {
+      return;
+    }
+
+    const fx = this.add
+      .sprite(x, y + 2, "skill-tornado")
+      .setDepth(22)
+      .setDisplaySize(120, 120)
+      .play("skill-tornado-spin", true);
+
+    this.tweens.add({
+      targets: fx,
+      alpha: 0,
+      scaleX: 1.35,
+      scaleY: 1.35,
+      duration: 300,
+      onComplete: () => fx.destroy(),
+    });
+  }
+
+  launchTornadoSweep() {
+    if (!this.textures.exists("skill-tornado")) {
+      return;
+    }
+
+    const startX = 40;
+    const endX = GAME_WIDTH - 40;
+    const y = this.laneY + 4;
+    const impacted = new Set();
+
+    const fx = this.add
+      .sprite(startX, y, "skill-tornado")
+      .setDepth(26)
+      .setDisplaySize(136, 136)
+      .play("skill-tornado-spin", true);
+
+    this.tweens.add({
+      targets: fx,
+      x: endX,
+      duration: 900,
+      ease: "Linear",
+      onUpdate: () => {
+        for (const enemy of this.enemies) {
+          if (!enemy.active || !enemy.isAlive || impacted.has(enemy)) {
+            continue;
+          }
+
+          const distance = Math.abs(enemy.x - fx.x);
+          if (distance > 72) {
+            continue;
+          }
+
+          impacted.add(enemy);
+          enemy.x = Math.min(
+            this.enemySpawnX - 10,
+            enemy.x + SKILL_CONFIG.tornadoKnockback,
+          );
+          this.combatSystem.applyDamage(enemy, SKILL_CONFIG.tornadoDamage);
+          this.liftEnemy(enemy, 500);
+        }
+      },
+      onComplete: () => {
+        if (fx.active) {
+          fx.destroy();
+        }
+      },
+    });
+  }
+
+  liftEnemy(enemy, durationMs = 500) {
+    if (!enemy || !enemy.active || !enemy.isAlive) {
+      return;
+    }
+
+    const liftHeight = 24;
+    if (enemy._airLiftTween && enemy._airLiftTween.isPlaying()) {
+      return;
+    }
+
+    const baseY = this.laneY;
+    enemy._airLiftTween = this.tweens.add({
+      targets: enemy,
+      y: baseY - liftHeight,
+      duration: durationMs * 0.5,
+      yoyo: true,
+      ease: "Sine.easeOut",
+      onUpdate: () => enemy.syncVisual?.(),
+      onComplete: () => {
+        if (enemy.active) {
+          enemy.y = baseY;
+          enemy.syncVisual?.();
+        }
+      },
+    });
+  }
+
+  createAnimations() {
+    const ensureAnim = (key, config) => {
+      if (!this.anims.exists(key)) {
+        this.anims.create({ key, ...config });
+      }
+    };
+
+    ensureAnim("player-main-idle", {
+      frames: this.anims.generateFrameNumbers("player-main", {
+        start: 0,
+        end: 1,
+      }),
+      frameRate: 4,
+      repeat: -1,
+    });
+    ensureAnim("player-main-move", {
+      frames: this.anims.generateFrameNumbers("player-main-move-sheet", {
+        start: 0,
+        end: 1,
+      }),
+      frameRate: 8,
+      repeat: -1,
+    });
+    ensureAnim("player-main-attack-melee", {
+      frames: this.anims.generateFrameNumbers(
+        "player-main-attack-melee-sheet",
+        {
+          start: 0,
+          end: 1,
+        },
+      ),
+      frameRate: 6,
+      repeat: 0,
+      yoyo: true,
+    });
+    ensureAnim("player-main-attack-ranged", {
+      frames: this.anims.generateFrameNumbers(
+        "player-main-attack-ranged-sheet",
+        {
+          start: 0,
+          end: 1,
+        },
+      ),
+      frameRate: 6,
+      repeat: 0,
+      yoyo: true,
+    });
+
+    ensureAnim("unit-soldier1-move", {
+      frames: this.anims.generateFrameNumbers("unit-soldier1", {
+        start: 0,
+        end: 1,
+      }),
+      frameRate: 7,
+      repeat: -1,
+    });
+    ensureAnim("unit-soldier1-attack", {
+      frames: this.anims.generateFrameNumbers("unit-soldier1-attack-sheet", {
+        start: 0,
+        end: 1,
+      }),
+      frameRate: 10,
+      repeat: 0,
+      yoyo: true,
+    });
+
+    ensureAnim("unit-soldier2-move", {
+      frames: this.anims.generateFrameNumbers("unit-soldier2", {
+        start: 0,
+        end: 1,
+      }),
+      frameRate: 7,
+      repeat: -1,
+    });
+    ensureAnim("unit-soldier2-attack", {
+      frames: this.anims.generateFrameNumbers("unit-soldier2-attack-sheet", {
+        start: 0,
+        end: 1,
+      }),
+      frameRate: 10,
+      repeat: 0,
+      yoyo: true,
+    });
+
+    ensureAnim("enemy-zombie1-move", {
+      frames: this.anims.generateFrameNumbers("enemy-zombie1", {
+        start: 0,
+        end: 1,
+      }),
+      frameRate: 6,
+      repeat: -1,
+    });
+    ensureAnim("enemy-zombie1-attack", {
+      frames: this.anims.generateFrameNumbers("enemy-zombie1-attack-sheet", {
+        start: 0,
+        end: 1,
+      }),
+      frameRate: 9,
+      repeat: 0,
+      yoyo: true,
+    });
+
+    ensureAnim("enemy-zombie2-move", {
+      frames: this.anims.generateFrameNumbers("enemy-zombie2", {
+        start: 0,
+        end: 1,
+      }),
+      frameRate: 5,
+      repeat: -1,
+    });
+    ensureAnim("enemy-zombie2-attack", {
+      frames: this.anims.generateFrameNumbers("enemy-zombie2-attack-sheet", {
+        start: 0,
+        end: 1,
+      }),
+      frameRate: 8,
+      repeat: 0,
+      yoyo: true,
+    });
+
+    ensureAnim("skill-tornado-spin", {
+      frames: this.anims.generateFrameNumbers("skill-tornado", {
+        start: 0,
+        end: 1,
+      }),
+      frameRate: 16,
+      repeat: -1,
+    });
+  }
+
   drawBackground() {
     this.add.rectangle(
       GAME_WIDTH * 0.5,
       this.laneY,
       GAME_WIDTH,
-      130,
+      108,
       0xb08f57,
       0.5,
     );

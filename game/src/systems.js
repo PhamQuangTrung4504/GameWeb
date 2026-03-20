@@ -136,6 +136,7 @@ export class ResourceSystem {
 export class CombatSystem {
   constructor(scene) {
     this.scene = scene;
+    this.playerRangedCooldownScale = 0.7;
   }
 
   update(time, deltaMs) {
@@ -156,6 +157,7 @@ export class CombatSystem {
 
       const target = this.findNearestEnemy(unit.x);
       if (!target) {
+        unit.playIdle?.();
         if (unit.body?.setVelocityX) {
           unit.body.setVelocityX(0);
         }
@@ -182,6 +184,7 @@ export class CombatSystem {
         }
 
         this.orientUnit(unit, direction);
+        unit.playMove?.();
         if (unit.body?.setVelocityX) {
           unit.body.setVelocityX(direction * unit.moveSpeed);
         }
@@ -193,6 +196,7 @@ export class CombatSystem {
         unit.body.setVelocityX(0);
       }
       unit.setScale(1, 1);
+      unit.playIdle?.();
 
       if (!unit.canAttack(time)) {
         continue;
@@ -206,6 +210,7 @@ export class CombatSystem {
       const scaledDamage = this.getScaledUnitDamage(unit.damage, level);
 
       unit.nextAttackAt = time + 1000 / scaledAttackSpeed;
+      unit.playAttack?.();
 
       if (unit.unitType === UNIT_TYPES.MELEE) {
         this.applyDamage(target, scaledDamage);
@@ -219,6 +224,7 @@ export class CombatSystem {
         scaledDamage,
         unit.bulletSpeed,
         COMBAT_CONFIG.unitBulletColor,
+        "bullet-stone",
       );
     }
   }
@@ -257,6 +263,7 @@ export class CombatSystem {
       }
 
       enemy.nextAttackAt = time + 1000 / enemy.attackSpeed;
+      enemy.playAttack?.();
       this.applyDefenseDamage(target, enemy.attackDamage);
     }
   }
@@ -287,13 +294,18 @@ export class CombatSystem {
     }
 
     const distance = Math.abs(target.x - player.x);
-    player.consumeAttack(time);
 
     if (distance <= player.meleeRange) {
+      player.nextAttackAt = time + 1000 / player.attackSpeed;
+      player.playAttackMelee?.(time);
       this.applyDamage(target, player.meleeDamage);
       return;
     }
 
+    player.nextAttackAt =
+      time +
+      1000 / Math.max(0.2, player.attackSpeed * this.playerRangedCooldownScale);
+    player.playAttackRanged?.(time);
     this.spawnBullet(
       player.x + 22,
       player.y - 10,
@@ -301,6 +313,7 @@ export class CombatSystem {
       player.rangedDamage,
       COMBAT_CONFIG.playerBulletSpeed,
       COMBAT_CONFIG.playerBulletColor,
+      "bullet-arrow",
     );
   }
 
@@ -320,11 +333,12 @@ export class CombatSystem {
     }
   }
 
-  spawnBullet(x, y, target, damage, speed, color) {
+  spawnBullet(x, y, target, damage, speed, color, textureKey = null) {
     const bullet = new Bullet(this.scene, x, y, target, {
       damage,
       speed,
       color,
+      textureKey,
     });
     this.scene.bullets.push(bullet);
   }
@@ -468,35 +482,14 @@ export class SkillSystem {
   }
 
   castTornado() {
-    const laneCenterY = this.scene.laneY;
-    const sceneWidth = this.scene.scale.width;
-
-    for (const enemy of this.scene.enemies) {
-      if (!enemy.active || !enemy.isAlive) {
-        continue;
-      }
-
-      enemy.x = Math.min(
-        this.scene.enemySpawnX - 10,
-        enemy.x + SKILL_CONFIG.tornadoKnockback,
-      );
-      this.scene.combatSystem.applyDamage(enemy, SKILL_CONFIG.tornadoDamage);
+    if (typeof this.scene.launchTornadoSweep === "function") {
+      this.scene.launchTornadoSweep();
+      return;
     }
 
-    const waveFx = this.scene.add.rectangle(
-      sceneWidth * 0.5,
-      laneCenterY,
-      sceneWidth - 80,
-      98,
-      0xa7d9ff,
-      0.28,
-    );
-    this.scene.tweens.add({
-      targets: waveFx,
-      alpha: 0,
-      duration: 220,
-      onComplete: () => waveFx.destroy(),
-    });
+    const laneCenterY = this.scene.laneY;
+    const sceneWidth = this.scene.scale.width;
+    this.scene.playSkillFx?.(sceneWidth * 0.5, laneCenterY);
   }
 }
 

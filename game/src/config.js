@@ -1,8 +1,8 @@
-export const GAME_WIDTH = 1600;
-export const GAME_HEIGHT = 680;
+export const GAME_WIDTH = 1760;
+export const GAME_HEIGHT = 760;
 
 export const BASE_HP = 10;
-export const LANE_Y = 320;
+export const LANE_Y = 350;
 export const BASE_X = 60;
 export const ENEMY_SPAWN_X = GAME_WIDTH - 30;
 export const MAX_ENERGY = 10;
@@ -170,6 +170,12 @@ export function buildGameConfig(GameScene, UIScene) {
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
     backgroundColor: "#d8c69d",
+    pixelArt: true,
+    render: {
+      pixelArt: true,
+      roundPixels: true,
+      antialias: false,
+    },
     physics: {
       default: "arcade",
     },
