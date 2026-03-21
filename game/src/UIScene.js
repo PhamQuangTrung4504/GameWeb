@@ -4,6 +4,7 @@ import {
   SKILL_CONFIG,
   UI_CONFIG,
   UNIT_DEPLOY_COST,
+  UNIT_TYPES,
 } from "./config.js";
 
 export class UIScene extends Phaser.Scene {
@@ -47,7 +48,7 @@ export class UIScene extends Phaser.Scene {
 
     this.createTopLeftHud(topPadding);
     this.createWaveHud(topPadding);
-    this.createTopRightSkillHud(topPadding);
+    this.createTopRightSkillHud(panelY);
     this.createBottomHud(panelY);
 
     this.gameOverText = this.add.text(GAME_WIDTH - 170, topPadding + 102, "", {
@@ -57,8 +58,6 @@ export class UIScene extends Phaser.Scene {
       fontStyle: "bold",
     });
 
-    this.skillReadyPulse = null;
-    this.isSkillPulseOn = false;
     this.hpLowPulse = null;
     this.isHpPulseOn = false;
     this.previousWave = null;
@@ -208,171 +207,162 @@ export class UIScene extends Phaser.Scene {
       .setOrigin(0.5, 0);
   }
 
-  createTopRightSkillHud(topPadding) {
-    const skillPanelWidth = 360;
-    const skillPanelHeight = 128;
-    const skillPanelX = GAME_WIDTH - 202;
-    const skillPanelY = topPadding + skillPanelHeight * 0.5;
+  createTopRightSkillHud(panelY) {
+    const cardY = panelY + UI_CONFIG.panelHeight * 0.5 - 52;
+    const skillCenterX = GAME_WIDTH - 220;
+    const skillCenterY = cardY;
 
-    this.skillPanel = this.add
-      .rectangle(
-        skillPanelX,
-        skillPanelY,
-        skillPanelWidth,
-        skillPanelHeight,
-        this.theme.skillPanel,
-        0.56,
+    if (this.textures.exists("skill-icon-tornado")) {
+      this.skillIcon = this.add
+        .image(skillCenterX, skillCenterY, "skill-icon-tornado")
+        .setDisplaySize(128, 128)
+        .setAlpha(0.9)
+        .setDepth(3);
+    } else {
+      this.skillIcon = this.add
+        .rectangle(skillCenterX, skillCenterY, 128, 128, 0x5d7eb6, 0.82)
+        .setStrokeStyle(2, 0x95b7f1, 0.95)
+        .setDepth(3);
+    }
+
+    this.skillIcon.setInteractive({ useHandCursor: true });
+    this.skillIcon.on("pointerdown", this.handleSkillIconTap, this);
+
+    this.skillMetaText = this.add
+      .text(
+        skillCenterX,
+        skillCenterY + 74,
+        `Tốn ${SKILL_CONFIG.energyCost} cost - Q`,
+        {
+          fontFamily: "Verdana",
+          fontSize: "14px",
+          color: "#f0e5c9",
+          fontStyle: "bold",
+          stroke: "#2f261b",
+          strokeThickness: 2,
+        },
       )
-      .setOrigin(0.5)
-      .setStrokeStyle(2, 0x60728a, 0.92);
+      .setOrigin(0.5, 0);
+  }
 
-    this.skillAccent = this.add
-      .rectangle(
-        skillPanelX - skillPanelWidth * 0.5 + 4,
-        skillPanelY,
-        8,
-        skillPanelHeight,
-        0x7eabf2,
-        0.75,
-      )
-      .setOrigin(0.5);
+  handleSkillIconTap() {
+    const gameScene = this.scene.get("GameScene");
+    if (!gameScene || gameScene.isGameOver || !gameScene.skillSystem) {
+      return;
+    }
 
-    this.skillTitleText = this.add.text(
-      skillPanelX - skillPanelWidth * 0.5 + 18,
-      topPadding + 16,
-      "",
-      {
-        fontFamily: "Georgia",
-        fontSize: "20px",
-        color: this.theme.skillHeader,
-        fontStyle: "bold",
-      },
-    );
-
-    this.skillStateText = this.add.text(
-      skillPanelX - skillPanelWidth * 0.5 + 18,
-      topPadding + 54,
-      "",
-      {
-        fontFamily: "Verdana",
-        fontSize: "22px",
-        color: this.theme.warning,
-        fontStyle: "bold",
-      },
-    );
-
-    this.skillHintText = this.add.text(
-      skillPanelX - skillPanelWidth * 0.5 + 18,
-      topPadding + 92,
-      "Press Q to cast",
-      {
-        fontFamily: "Verdana",
-        fontSize: "14px",
-        color: this.theme.textDim,
-      },
-    );
+    gameScene.skillSystem.tryCast(gameScene.time.now);
   }
 
   createBottomHud(panelY) {
-    this.bottomPanel = this.add
-      .rectangle(
-        GAME_WIDTH * 0.5,
-        panelY + UI_CONFIG.panelHeight * 0.5,
-        GAME_WIDTH,
-        UI_CONFIG.panelHeight,
-        this.theme.panelWarm,
-        0.68,
-      )
-      .setOrigin(0.5)
-      .setStrokeStyle(2, this.theme.border, 0.82);
+    const panelHeight = UI_CONFIG.panelHeight;
+    this.bottomPanel = null;
 
-    const cardY = panelY + UI_CONFIG.panelHeight * 0.5;
-    const cardWidth = 330;
-    const cardHeight = 72;
-    const leftCardX = GAME_WIDTH * 0.26;
-    const midCardX = GAME_WIDTH * 0.52;
+    const cardY = panelY + panelHeight * 0.5 - 52;
+    const cardWidth = 200;
+    const cardHeight = 176;
+    const cardGap = 170;
+    const firstCardLeft = 52;
+    const leftCardX = firstCardLeft + cardWidth * 0.5;
+    const midCardX = leftCardX + cardWidth + cardGap;
+    const upgradeOffsetX = cardWidth * 0.5 + 50;
+    const upgradeY = cardY + 18;
+    const upgradeSize = 94;
 
-    this.rangedCardBg = this.add
-      .rectangle(
-        leftCardX,
-        cardY,
-        cardWidth,
-        cardHeight,
-        this.theme.cardOn,
-        0.96,
-      )
-      .setOrigin(0.5)
-      .setStrokeStyle(2, this.theme.cardStroke, 0.9);
-    this.meleeCardBg = this.add
-      .rectangle(
-        midCardX,
-        cardY,
-        cardWidth,
-        cardHeight,
-        this.theme.cardOn,
-        0.96,
-      )
-      .setOrigin(0.5)
-      .setStrokeStyle(2, this.theme.cardStroke, 0.9);
+    this.rangedCard = this.add
+      .image(leftCardX, cardY, "card-soldier1")
+      .setDisplaySize(cardWidth, cardHeight)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", () => this.handleUnitCardTap(UNIT_TYPES.RANGED));
 
-    this.rangedCardTag = this.add
-      .rectangle(leftCardX - 146, panelY + 18, 58, 18, 0x6d4c36, 0.95)
-      .setOrigin(0, 0.5);
-    this.rangedTagText = this.add.text(leftCardX - 139, panelY + 10, "UNIT", {
-      fontFamily: "Verdana",
-      fontSize: "11px",
-      color: this.theme.textBright,
-      fontStyle: "bold",
-    });
+    this.meleeCard = this.add
+      .image(midCardX, cardY, "card-soldier2")
+      .setDisplaySize(cardWidth, cardHeight)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", () => this.handleUnitCardTap(UNIT_TYPES.MELEE));
 
-    this.meleeCardTag = this.add
-      .rectangle(midCardX - 146, panelY + 18, 58, 18, 0x6d4c36, 0.95)
-      .setOrigin(0, 0.5);
-    this.meleeTagText = this.add.text(midCardX - 139, panelY + 10, "UNIT", {
-      fontFamily: "Verdana",
-      fontSize: "11px",
-      color: this.theme.textBright,
-      fontStyle: "bold",
-    });
+    this.rangedUpgradeIcon = this.add
+      .image(leftCardX + upgradeOffsetX, upgradeY, "icon-upgrade-unit")
+      .setDisplaySize(upgradeSize, upgradeSize)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", (pointer, localX, localY, event) => {
+        event?.stopPropagation?.();
+        this.handleUpgradeCardTap(UNIT_TYPES.RANGED);
+      });
 
-    this.rangedUnitText = this.add.text(leftCardX - 146, panelY + 12, "", {
-      fontFamily: "Georgia",
-      fontSize: "18px",
-      color: UI_CONFIG.normalColor,
-      fontStyle: "bold",
-    });
-    this.rangedUpgradeText = this.add.text(leftCardX - 146, panelY + 42, "", {
-      fontFamily: "Verdana",
-      fontSize: "14px",
-      color: UI_CONFIG.normalColor,
-      fontStyle: "bold",
-    });
+    this.meleeUpgradeIcon = this.add
+      .image(midCardX + upgradeOffsetX, upgradeY, "icon-upgrade-unit")
+      .setDisplaySize(upgradeSize, upgradeSize)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", (pointer, localX, localY, event) => {
+        event?.stopPropagation?.();
+        this.handleUpgradeCardTap(UNIT_TYPES.MELEE);
+      });
 
-    this.meleeUnitText = this.add.text(midCardX - 146, panelY + 12, "", {
-      fontFamily: "Georgia",
-      fontSize: "18px",
-      color: UI_CONFIG.normalColor,
-      fontStyle: "bold",
-    });
-    this.meleeUpgradeText = this.add.text(midCardX - 146, panelY + 42, "", {
-      fontFamily: "Verdana",
-      fontSize: "14px",
-      color: UI_CONFIG.normalColor,
-      fontStyle: "bold",
-    });
+    this.rangedLevelText = this.add
+      .text(leftCardX, cardY + cardHeight * 0.5 + 2, "LV 1", {
+        fontFamily: "Verdana",
+        fontSize: "18px",
+        color: "#efe3c8",
+        fontStyle: "bold",
+        stroke: "#2c2419",
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5, 0);
 
-    this.hintText = this.add.text(GAME_WIDTH - 332, panelY + 14, "", {
-      fontFamily: "Verdana",
-      fontSize: "13px",
-      color: this.theme.textBright,
-      fontStyle: "bold",
-    });
-    this.hintUpgradeText = this.add.text(GAME_WIDTH - 332, panelY + 40, "", {
-      fontFamily: "Verdana",
-      fontSize: "13px",
-      color: this.theme.textSoft,
-      fontStyle: "bold",
-    });
+    this.meleeLevelText = this.add
+      .text(midCardX, cardY + cardHeight * 0.5 + 2, "LV 1", {
+        fontFamily: "Verdana",
+        fontSize: "18px",
+        color: "#efe3c8",
+        fontStyle: "bold",
+        stroke: "#2c2419",
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5, 0);
+
+    this.rangedUpgradeCostText = this.add
+      .text(this.rangedUpgradeIcon.x, this.rangedUpgradeIcon.y - 56, "Cost 0", {
+        fontFamily: "Verdana",
+        fontSize: "16px",
+        color: "#efe3c8",
+        fontStyle: "bold",
+        stroke: "#2c2419",
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5, 0.5);
+
+    this.meleeUpgradeCostText = this.add
+      .text(this.meleeUpgradeIcon.x, this.meleeUpgradeIcon.y - 56, "Cost 0", {
+        fontFamily: "Verdana",
+        fontSize: "16px",
+        color: "#efe3c8",
+        fontStyle: "bold",
+        stroke: "#2c2419",
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5, 0.5);
+
+    this.hintText = null;
+    this.hintUpgradeText = null;
+  }
+
+  handleUnitCardTap(unitType) {
+    const gameScene = this.scene.get("GameScene");
+    if (!gameScene || gameScene.isGameOver) {
+      return;
+    }
+
+    gameScene.buyUnit(unitType);
+  }
+
+  handleUpgradeCardTap(unitType) {
+    const gameScene = this.scene.get("GameScene");
+    if (!gameScene || gameScene.isGameOver) {
+      return;
+    }
+
+    gameScene.upgradeUnit(unitType);
   }
 
   update() {
@@ -385,6 +375,12 @@ export class UIScene extends Phaser.Scene {
       this.registry.get("skillCooldownMs") ??
       0;
     const skillReady = this.registry.get("skillReady") ?? false;
+    const rangedCardCooldownMs = this.registry.get("rangedCardCooldownMs") ?? 0;
+    const meleeCardCooldownMs = this.registry.get("meleeCardCooldownMs") ?? 0;
+    const rangedUnitCost =
+      this.registry.get("unitCostRanged") ?? UNIT_DEPLOY_COST;
+    const meleeUnitCost =
+      this.registry.get("unitCostMelee") ?? UNIT_DEPLOY_COST;
     const rangedLevel = this.registry.get("rangedLevel") ?? 1;
     const meleeLevel = this.registry.get("meleeLevel") ?? 1;
     const upgradeCostRanged = this.registry.get("upgradeCostRanged") ?? 0;
@@ -430,29 +426,9 @@ export class UIScene extends Phaser.Scene {
 
     this.waveText.setText(`WAVE ${wave}`);
 
-    this.skillTitleText.setText(
-      `Tornado (Q)  Cost: ${SKILL_CONFIG.energyCost}`,
-    );
-    if (cooldownMs > 0) {
-      this.skillStateText.setText(
-        `Cooldown: ${(cooldownMs / 1000).toFixed(1)}s`,
-      );
-      this.skillStateText.setColor(this.theme.cooldown);
-      this.disableSkillReadyPulse();
-    } else if (!skillReady) {
-      this.skillStateText.setText("NO ENERGY");
-      this.skillStateText.setColor(this.theme.warning);
-      this.disableSkillReadyPulse();
-    } else {
-      this.skillStateText.setText("READY");
-      this.skillStateText.setColor(this.theme.ready);
-      this.enableSkillReadyPulse();
-    }
+    const skillAvailable = cooldownMs <= 0 && skillReady;
+    this.skillIcon.setAlpha(skillAvailable ? 0.95 : 0.35);
 
-    const unitCostColor =
-      energy >= UNIT_DEPLOY_COST
-        ? UI_CONFIG.normalColor
-        : UI_CONFIG.warningColor;
     const rangedUpgradeColor =
       coin >= upgradeCostRanged
         ? UI_CONFIG.normalColor
@@ -460,27 +436,42 @@ export class UIScene extends Phaser.Scene {
     const meleeUpgradeColor =
       coin >= upgradeCostMelee ? UI_CONFIG.normalColor : UI_CONFIG.warningColor;
 
-    this.rangedUnitText.setText(`Ranged (LMB)  Cost: ${UNIT_DEPLOY_COST}`);
-    this.meleeUnitText.setText(`Melee (RMB)  Cost: ${UNIT_DEPLOY_COST}`);
-    this.rangedUpgradeText.setText(
-      `Upgrade [1]  Lv.${rangedLevel}  Cost: ${upgradeCostRanged}`,
+    if (rangedCardCooldownMs > 0) {
+      this.rangedLevelText.setText(
+        `LV ${rangedLevel} - CD ${(rangedCardCooldownMs / 1000).toFixed(1)}s`,
+      );
+    } else {
+      this.rangedLevelText.setText(
+        `LV ${rangedLevel} - Cost ${rangedUnitCost}`,
+      );
+    }
+
+    if (meleeCardCooldownMs > 0) {
+      this.meleeLevelText.setText(
+        `LV ${meleeLevel} - CD ${(meleeCardCooldownMs / 1000).toFixed(1)}s`,
+      );
+    } else {
+      this.meleeLevelText.setText(`LV ${meleeLevel} - Cost ${meleeUnitCost}`);
+    }
+
+    const rangedCardReady = rangedCardCooldownMs <= 0 && coin >= rangedUnitCost;
+    const meleeCardReady = meleeCardCooldownMs <= 0 && coin >= meleeUnitCost;
+    this.rangedCard.setAlpha(rangedCardReady ? 1 : 0.45);
+    this.meleeCard.setAlpha(meleeCardReady ? 1 : 0.45);
+
+    this.rangedUpgradeIcon.setAlpha(coin >= upgradeCostRanged ? 1 : 0.45);
+    this.meleeUpgradeIcon.setAlpha(coin >= upgradeCostMelee ? 1 : 0.45);
+    this.rangedUpgradeCostText.setText(`Cost ${upgradeCostRanged}`);
+    this.meleeUpgradeCostText.setText(`Cost ${upgradeCostMelee}`);
+    this.rangedUpgradeCostText.setColor(
+      coin >= upgradeCostRanged ? "#efe3c8" : "#d28d8d",
     );
-    this.meleeUpgradeText.setText(
-      `Upgrade [2]  Lv.${meleeLevel}  Cost: ${upgradeCostMelee}`,
+    this.meleeUpgradeCostText.setColor(
+      coin >= upgradeCostMelee ? "#efe3c8" : "#d28d8d",
     );
 
-    this.rangedUnitText.setColor(unitCostColor);
-    this.meleeUnitText.setColor(unitCostColor);
-    this.rangedUpgradeText.setColor(rangedUpgradeColor);
-    this.meleeUpgradeText.setColor(meleeUpgradeColor);
-
-    const cardColor =
-      energy >= UNIT_DEPLOY_COST ? this.theme.cardOn : this.theme.cardOff;
-    this.rangedCardBg.setFillStyle(cardColor, 0.96);
-    this.meleeCardBg.setFillStyle(cardColor, 0.96);
-
-    this.hintText.setText("LMB: Ranged  |  RMB: Melee");
-    this.hintUpgradeText.setText("Q: Skill  |  1/2: Upgrade");
+    this.rangedLevelText.setColor(rangedCardReady ? "#efe3c8" : "#d28d8d");
+    this.meleeLevelText.setColor(meleeCardReady ? "#efe3c8" : "#d28d8d");
 
     if (hpRatio < 0.3) {
       this.enableHpLowPulse();
@@ -528,37 +519,6 @@ export class UIScene extends Phaser.Scene {
       yoyo: true,
       ease: "Sine.easeOut",
     });
-  }
-
-  enableSkillReadyPulse() {
-    if (this.isSkillPulseOn) {
-      return;
-    }
-
-    this.isSkillPulseOn = true;
-    this.skillReadyPulse = this.tweens.add({
-      targets: [this.skillPanel, this.skillAccent],
-      alpha: { from: 0.56, to: 0.74 },
-      duration: 480,
-      yoyo: true,
-      repeat: -1,
-      ease: "Sine.easeInOut",
-    });
-  }
-
-  disableSkillReadyPulse() {
-    if (!this.isSkillPulseOn) {
-      return;
-    }
-
-    this.isSkillPulseOn = false;
-    if (this.skillReadyPulse) {
-      this.skillReadyPulse.stop();
-      this.skillReadyPulse = null;
-    }
-
-    this.skillPanel.setAlpha(0.56);
-    this.skillAccent.setAlpha(0.75);
   }
 
   enableHpLowPulse() {

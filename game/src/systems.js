@@ -467,18 +467,30 @@ export class SkillSystem {
       return;
     }
 
+    this.tryCast(time);
+  }
+
+  tryCast(time) {
+    const cooldownRemaining = Math.max(
+      0,
+      SKILL_CONFIG.cooldownMs - (time - this.lastUsedAt),
+    );
+
     if (cooldownRemaining > 0) {
-      return;
+      this.scene.handleSkillHotkeyFeedback?.();
+      return false;
     }
 
     if (this.scene.energy < SKILL_CONFIG.energyCost) {
       this.scene.showDamageText(420, 76, "Need energy", "#7d1d1d", 18);
-      return;
+      this.scene.handleSkillHotkeyFeedback?.();
+      return false;
     }
 
     this.scene.addEnergy(-SKILL_CONFIG.energyCost);
     this.lastUsedAt = time;
     this.castTornado();
+    return true;
   }
 
   castTornado() {

@@ -12,6 +12,7 @@ import {
   PLAYER_STATS,
   UI_CONFIG,
   UNIT_DEPLOY_COST,
+  UNIT_CARD_COOLDOWN_MS,
   UNIT_STATS,
   UNIT_TYPES,
   STARTING_COIN,
@@ -63,7 +64,7 @@ export class GameScene extends Phaser.Scene {
 
     this.load.spritesheet(
       "unit-soldier1",
-      "assets/unit/soidier1_di_chuyen.png",
+      "assets/unit/soldier1_di_chuyen.png",
       {
         frameWidth: 48,
         frameHeight: 48,
@@ -134,6 +135,14 @@ export class GameScene extends Phaser.Scene {
 
     this.load.image("bullet-arrow", "assets/object/mui_ten.png");
     this.load.image("bullet-stone", "assets/object/vien_dat_cua_soldier1.png");
+    this.load.image("home-castle", "assets/home/castle.png");
+    this.load.image("card-soldier1", "assets/card/soldier1_card.png");
+    this.load.image("card-soldier2", "assets/card/soldier2_card.png");
+    this.load.image("icon-upgrade-unit", "assets/object/upgrade_unit.png");
+    this.load.image(
+      "skill-icon-tornado",
+      "assets/object/icon_skill_loc_xoay.png",
+    );
   }
 
   create() {
@@ -147,6 +156,9 @@ export class GameScene extends Phaser.Scene {
     this.isGameOver = false;
     this.rangedLevel = 1;
     this.meleeLevel = 1;
+    this.unitCardCooldownMs = UNIT_CARD_COOLDOWN_MS;
+    this.rangedCardReadyAt = 0;
+    this.meleeCardReadyAt = 0;
 
     this.laneY = LANE_Y;
     this.baseX = BASE_X;
@@ -158,10 +170,12 @@ export class GameScene extends Phaser.Scene {
 
     this.drawBackground();
 
-    this.spawnUnit(UNIT_STATS.default.x, UNIT_TYPES.RANGED, true);
+    this.spawnUnit(UNIT_STATS.default.x, UNIT_TYPES.RANGED);
     this.player = new Player(this, PLAYER_STATS.x, this.laneY, PLAYER_STATS);
-    this.attachHealthBar(this.player, 70, 8, 0x2b2b2b, 0x36c55a, 66);
+    this.attachHealthBar(this.player, 84, 12, 0x2b2b2b, 0x36c55a, 88, -8);
     this.playerDirection = 1;
+    this.touchMoveAxis = 0;
+    this.touchMoveUntil = 0;
     this.uiMessageId = 0;
 
     this.input.mouse.disableContextMenu();
@@ -200,6 +214,8 @@ export class GameScene extends Phaser.Scene {
     this.syncUiRegistry();
 
     this.input.on("pointerdown", this.handleDeployInput, this);
+    this.input.on("pointermove", this.handlePointerMoveControl, this);
+    this.input.on("pointerup", this.handlePointerUpControl, this);
     this.input.keyboard.on("keydown-Q", this.handleSkillHotkeyFeedback, this);
 
     this.scene.launch("UIScene");
@@ -228,6 +244,10 @@ export class GameScene extends Phaser.Scene {
     const skillCooldownMs = this.registry.get("skillCooldownMs") ?? 0;
     const skillReady =
       skillCooldownMs <= 0 && this.energy >= SKILL_CONFIG.energyCost;
+    const rangedCardCooldownMs = this.getUnitCardCooldownMs(UNIT_TYPES.RANGED);
+    const meleeCardCooldownMs = this.getUnitCardCooldownMs(UNIT_TYPES.MELEE);
+    const rangedUnitCost = this.getUnitDeployCost(UNIT_TYPES.RANGED);
+    const meleeUnitCost = this.getUnitDeployCost(UNIT_TYPES.MELEE);
     const upgradeCostRanged = this.upgradeSystem.calculateUpgradeCost(
       this.rangedLevel,
     );
@@ -244,6 +264,10 @@ export class GameScene extends Phaser.Scene {
     this.registry.set("wave", this.wave);
     this.registry.set("skillCooldown", skillCooldownMs);
     this.registry.set("skillReady", skillReady);
+    this.registry.set("rangedCardCooldownMs", rangedCardCooldownMs);
+    this.registry.set("meleeCardCooldownMs", meleeCardCooldownMs);
+    this.registry.set("unitCostRanged", rangedUnitCost);
+    this.registry.set("unitCostMelee", meleeUnitCost);
     this.registry.set("rangedLevel", this.rangedLevel);
     this.registry.set("meleeLevel", this.meleeLevel);
     this.registry.set("upgradeCostRanged", upgradeCostRanged);
@@ -338,6 +362,14 @@ export class GameScene extends Phaser.Scene {
       moveAxis += 1;
     }
 
+    if (moveAxis === 0 && this.touchMoveAxis !== 0) {
+      if (this.time.now <= this.touchMoveUntil) {
+        moveAxis = this.touchMoveAxis;
+      } else {
+        this.touchMoveAxis = 0;
+      }
+    }
+
     const speed = this.player.moveSpeed ?? PLAYER_SPEED;
     this.player.x += moveAxis * speed * deltaSeconds;
 
@@ -373,20 +405,81 @@ export class GameScene extends Phaser.Scene {
 
     const panelTopY = GAME_HEIGHT - UI_CONFIG.panelHeight;
     if (pointer.y < panelTopY) {
-      return;
+      this.setTouchMoveAxisFromPointer(pointer);
+    }
+  }
+
+  buyUnit(unitType) {
+    const unitCost = this.getUnitDeployCost(unitType);
+    const cooldownMs = this.getUnitCardCooldownMs(unitType);
+    if (cooldownMs > 0) {
+      this.pushUiMessage(
+        `Card cooldown ${(cooldownMs / 1000).toFixed(1)}s`,
+        this.player ? this.player.x : GAME_WIDTH * 0.5,
+        this.laneY - 92,
+        UI_CONFIG.warningColor,
+      );
+      return null;
     }
 
-    let deployType = null;
-    if (pointer.x < GAME_WIDTH * 0.33) {
-      deployType = UNIT_TYPES.RANGED;
-    } else if (pointer.x < GAME_WIDTH * 0.66) {
-      deployType = UNIT_TYPES.MELEE;
+    if (this.coin < unitCost) {
+      this.pushUiMessage(
+        `Need ${unitCost} coin`,
+        this.player ? this.player.x : GAME_WIDTH * 0.5,
+        this.laneY - 92,
+        UI_CONFIG.warningColor,
+      );
+      return null;
+    }
+
+    const deployX = this.getNextDeployX(unitType);
+    const unit = this.spawnUnit(deployX, unitType);
+    if (!unit) {
+      return null;
+    }
+
+    this.addCoin(-unitCost);
+
+    const nextReady = this.time.now + this.unitCardCooldownMs;
+    if (unitType === UNIT_TYPES.MELEE) {
+      this.meleeCardReadyAt = nextReady;
     } else {
+      this.rangedCardReadyAt = nextReady;
+    }
+
+    return unit;
+  }
+
+  upgradeUnit(unitType) {
+    if (unitType === UNIT_TYPES.MELEE) {
+      this.tryUpgrade("melee");
       return;
     }
 
-    const deployX = this.getNextDeployX(deployType);
-    this.spawnUnit(deployX, deployType, false);
+    this.tryUpgrade("ranged");
+  }
+
+  handlePointerMoveControl(pointer) {
+    if (this.isGameOver || !pointer.isDown) {
+      return;
+    }
+
+    const panelTopY = GAME_HEIGHT - UI_CONFIG.panelHeight;
+    if (pointer.y >= panelTopY) {
+      return;
+    }
+
+    this.setTouchMoveAxisFromPointer(pointer);
+  }
+
+  handlePointerUpControl() {
+    this.touchMoveAxis = 0;
+    this.touchMoveUntil = 0;
+  }
+
+  setTouchMoveAxisFromPointer(pointer) {
+    this.touchMoveAxis = pointer.x < GAME_WIDTH * 0.5 ? -1 : 1;
+    this.touchMoveUntil = this.time.now + 220;
   }
 
   getNextDeployX(unitType) {
@@ -401,22 +494,19 @@ export class GameScene extends Phaser.Scene {
     return slots[existingCount % slots.length];
   }
 
-  spawnUnit(x, unitType, free = false) {
-    if (!free && this.energy < UNIT_DEPLOY_COST) {
-      this.showDamageText(x, this.laneY - 72, "Need energy", "#7d1d1d", 18);
-      this.pushUiMessage(
-        "Not enough energy",
-        this.player ? this.player.x : x,
-        this.laneY - 84,
-        UI_CONFIG.warningColor,
-      );
-      return null;
-    }
+  getUnitDeployCost() {
+    return UNIT_DEPLOY_COST;
+  }
 
-    if (!free) {
-      this.addEnergy(-UNIT_DEPLOY_COST);
-    }
+  getUnitCardCooldownMs(unitType) {
+    const readyAt =
+      unitType === UNIT_TYPES.MELEE
+        ? this.meleeCardReadyAt
+        : this.rangedCardReadyAt;
+    return Math.max(0, readyAt - this.time.now);
+  }
 
+  spawnUnit(x, unitType) {
     let unit;
     if (unitType === UNIT_TYPES.MELEE) {
       unit = new MeleeUnit(this, x, this.laneY, UNIT_STATS.melee);
@@ -426,7 +516,7 @@ export class GameScene extends Phaser.Scene {
       unit = new Unit(this, x, this.laneY, UNIT_STATS.default);
     }
 
-    this.attachHealthBar(unit, 44, 7, 0x2b2b2b, 0x36c55a, 54);
+    this.attachHealthBar(unit, 56, 9, 0x2b2b2b, 0x36c55a, 68);
     unit.syncVisual?.();
 
     this.units.push(unit);
@@ -536,9 +626,18 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
-  attachHealthBar(entity, width, height, bgColor, fillColor, offsetY) {
+  attachHealthBar(
+    entity,
+    width,
+    height,
+    bgColor,
+    fillColor,
+    offsetY,
+    shiftX = 0,
+  ) {
     entity.healthBarOffsetY = offsetY;
     entity.healthBarWidth = width;
+    entity.healthBarShiftX = shiftX;
 
     entity.healthBarBg = this.add
       .rectangle(
@@ -589,7 +688,7 @@ export class GameScene extends Phaser.Scene {
     for (const enemy of this.enemies) {
       enemy.syncVisual?.();
       if (!enemy.healthBarBg) {
-        this.attachHealthBar(enemy, 44, 7, 0x2b2b2b, 0x36c55a, 54);
+        this.attachHealthBar(enemy, 56, 9, 0x2b2b2b, 0x36c55a, 68);
       }
 
       this.updateBarFor(enemy, enemy.currentHp, enemy.maxHp);
@@ -606,7 +705,8 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const leftX = entity.x - entity.healthBarWidth * 0.5;
+    const leftX =
+      entity.x - entity.healthBarWidth * 0.5 + (entity.healthBarShiftX ?? 0);
     const y = entity.y - entity.healthBarOffsetY;
     const ratio = Phaser.Math.Clamp(currentHp / Math.max(1, maxHp), 0, 1);
 
@@ -638,6 +738,8 @@ export class GameScene extends Phaser.Scene {
   endGame() {
     this.isGameOver = true;
     this.input.off("pointerdown", this.handleDeployInput, this);
+    this.input.off("pointermove", this.handlePointerMoveControl, this);
+    this.input.off("pointerup", this.handlePointerUpControl, this);
     this.input.keyboard.off("keydown-Q", this.handleSkillHotkeyFeedback, this);
 
     for (let i = this.bullets.length - 1; i >= 0; i -= 1) {
@@ -940,18 +1042,19 @@ export class GameScene extends Phaser.Scene {
       GAME_WIDTH * 0.5,
       this.laneY,
       GAME_WIDTH,
-      108,
+      130,
       0xb08f57,
       0.5,
     );
-    this.add.rectangle(this.baseX, this.laneY, 48, 84, 0x4e4232);
 
-    this.add
-      .text(this.baseX - 18, this.laneY - 12, "BASE", {
-        fontFamily: "Trebuchet MS",
-        fontSize: "12px",
-        color: "#f3e6c9",
-      })
-      .setDepth(10);
+    if (this.textures.exists("home-castle")) {
+      this.add
+        .image(this.baseX + 170, this.laneY, "home-castle")
+        .setDisplaySize(384, 464)
+        .setOrigin(0.5, 1)
+        .setDepth(10);
+    } else {
+      this.add.rectangle(this.baseX, this.laneY, 48, 84, 0x4e4232);
+    }
   }
 }

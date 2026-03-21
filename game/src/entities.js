@@ -31,7 +31,7 @@ export class Enemy extends Phaser.GameObjects.Rectangle {
       .sprite(x, y, textureKey)
       .setOrigin(0.5, 1)
       .setDepth(15)
-      .setDisplaySize(78, 96);
+      .setDisplaySize(94, 115);
     return sprite;
   }
 
@@ -41,7 +41,7 @@ export class Enemy extends Phaser.GameObjects.Rectangle {
     }
 
     this.visual.x = this.x;
-    this.visual.y = this.y + 24;
+    this.visual.y = this.y + 30;
   }
 
   playMove() {
@@ -171,7 +171,7 @@ export class Unit extends Phaser.GameObjects.Rectangle {
       .sprite(x, y, textureKey)
       .setOrigin(0.5, 1)
       .setDepth(16)
-      .setDisplaySize(78, 96);
+      .setDisplaySize(94, 115);
     return sprite;
   }
 
@@ -181,7 +181,7 @@ export class Unit extends Phaser.GameObjects.Rectangle {
     }
 
     this.visual.x = this.x;
-    this.visual.y = this.y + 26;
+    this.visual.y = this.y + 31;
   }
 
   playIdle() {
@@ -321,7 +321,7 @@ export class Player extends Phaser.GameObjects.Rectangle {
       .sprite(x, y, "player-main")
       .setOrigin(0.5, 1)
       .setDepth(18)
-      .setDisplaySize(114, 142);
+      .setDisplaySize(137, 170);
   }
 
   syncVisual() {
@@ -330,7 +330,7 @@ export class Player extends Phaser.GameObjects.Rectangle {
     }
 
     this.visual.x = this.x;
-    this.visual.y = this.y + 30;
+    this.visual.y = this.y + 36;
   }
 
   playIdle() {

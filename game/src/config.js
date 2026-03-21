@@ -2,7 +2,7 @@ export const GAME_WIDTH = 1760;
 export const GAME_HEIGHT = 760;
 
 export const BASE_HP = 10;
-export const LANE_Y = 350;
+export const LANE_Y = 460;
 export const BASE_X = 60;
 export const ENEMY_SPAWN_X = GAME_WIDTH - 30;
 export const MAX_ENERGY = 10;
@@ -11,6 +11,7 @@ export const STARTING_COIN = 0;
 export const STARTING_ENERGY = 0;
 
 export const UNIT_DEPLOY_COST = 3;
+export const UNIT_CARD_COOLDOWN_MS = 5000;
 export const UNIT_HP = 36;
 export const UNIT_MOVE_SPEED = 80;
 
@@ -152,7 +153,7 @@ export const UI_CONFIG = {
   topPadding: 14,
   leftPadding: 16,
   bottomPadding: 14,
-  panelHeight: 84,
+  panelHeight: 126,
   normalColor: "#2f2a22",
   warningColor: "#8a1c1c",
   readyColor: "#1f7a32",
