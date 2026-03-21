@@ -362,12 +362,8 @@ export class GameScene extends Phaser.Scene {
       moveAxis += 1;
     }
 
-    if (moveAxis === 0 && this.touchMoveAxis !== 0) {
-      if (this.time.now <= this.touchMoveUntil) {
-        moveAxis = this.touchMoveAxis;
-      } else {
-        this.touchMoveAxis = 0;
-      }
+    if (moveAxis === 0) {
+      moveAxis = this.getPointerMoveAxis();
     }
 
     const speed = this.player.moveSpeed ?? PLAYER_SPEED;
@@ -479,7 +475,21 @@ export class GameScene extends Phaser.Scene {
 
   setTouchMoveAxisFromPointer(pointer) {
     this.touchMoveAxis = pointer.x < GAME_WIDTH * 0.5 ? -1 : 1;
-    this.touchMoveUntil = this.time.now + 220;
+    this.touchMoveUntil = this.time.now;
+  }
+
+  getPointerMoveAxis() {
+    const pointer = this.input.activePointer;
+    if (!pointer || !pointer.isDown) {
+      return 0;
+    }
+
+    const panelTopY = GAME_HEIGHT - UI_CONFIG.panelHeight;
+    if (pointer.y >= panelTopY) {
+      return 0;
+    }
+
+    return pointer.x < GAME_WIDTH * 0.5 ? -1 : 1;
   }
 
   getNextDeployX(unitType) {

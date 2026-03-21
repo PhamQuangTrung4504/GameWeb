@@ -39,6 +39,24 @@
         max-height: 94dvh;
       }
 
+      #game-root:fullscreen,
+      #game-root:-webkit-full-screen {
+        width: 100vw;
+        height: 100dvh;
+        max-height: 100dvh;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        display: grid;
+        place-items: center;
+        background: #16120e;
+      }
+
+      #game-root:fullscreen canvas,
+      #game-root:-webkit-full-screen canvas {
+        margin: auto;
+      }
+
       #rotate-hint {
         position: fixed;
         inset: 0;

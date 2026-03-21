@@ -50,6 +50,7 @@ export class UIScene extends Phaser.Scene {
     this.createWaveHud(topPadding);
     this.createTopRightSkillHud(panelY);
     this.createBottomHud(panelY);
+    this.createFullscreenToggle();
 
     this.gameOverText = this.add.text(GAME_WIDTH - 170, topPadding + 102, "", {
       fontFamily: "Georgia",
@@ -63,6 +64,52 @@ export class UIScene extends Phaser.Scene {
     this.previousWave = null;
     this.lastMessageMarker = null;
     this.feedbackText = null;
+  }
+
+  createFullscreenToggle() {
+    this.fullscreenBtnBg = this.add
+      .rectangle(GAME_WIDTH - 56, 24, 92, 30, 0x2b2f34, 0.82)
+      .setOrigin(0.5)
+      .setStrokeStyle(2, 0x8a7858, 0.9)
+      .setDepth(200)
+      .setInteractive({ useHandCursor: true });
+
+    this.fullscreenBtnText = this.add
+      .text(GAME_WIDTH - 56, 24, "", {
+        fontFamily: "Verdana",
+        fontSize: "12px",
+        color: "#f0e5c9",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5)
+      .setDepth(201);
+
+    this.fullscreenBtnBg.on("pointerdown", this.toggleFullscreenMode, this);
+    this.fullscreenBtnText.setInteractive({ useHandCursor: true });
+    this.fullscreenBtnText.on("pointerdown", this.toggleFullscreenMode, this);
+
+    this.scale.on("enterfullscreen", this.refreshFullscreenButtonLabel, this);
+    this.scale.on("leavefullscreen", this.refreshFullscreenButtonLabel, this);
+    this.refreshFullscreenButtonLabel();
+  }
+
+  toggleFullscreenMode() {
+    if (this.scale.isFullscreen) {
+      this.scale.stopFullscreen();
+      return;
+    }
+
+    this.scale.startFullscreen();
+  }
+
+  refreshFullscreenButtonLabel() {
+    if (!this.fullscreenBtnText) {
+      return;
+    }
+
+    this.fullscreenBtnText.setText(
+      this.scale.isFullscreen ? "Thu nhỏ" : "To màn",
+    );
   }
 
   createTopLeftHud(topPadding) {
@@ -493,6 +540,8 @@ export class UIScene extends Phaser.Scene {
     if (hp <= 0) {
       this.gameOverText.setText("Defeated");
     }
+
+    this.refreshFullscreenButtonLabel();
   }
 
   animateWaveText() {

@@ -169,6 +169,7 @@ export function buildGameConfig(GameScene, UIScene) {
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
+      fullscreenTarget: "game-root",
     },
     backgroundColor: "#d8c69d",
     pixelArt: true,
