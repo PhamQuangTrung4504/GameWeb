@@ -14,6 +14,7 @@ export class Enemy extends Phaser.GameObjects.Rectangle {
     this.rewardCoin = stats.rewardCoin ?? ENEMY_STATS.normal.rewardCoin;
     this.enemyType = stats.enemyType ?? "normal";
     this.isAlive = true;
+    this.actionLockUntil = 0;
     this.setVisible(false);
     this.visual = this.createVisual(scene, x, y, this.enemyType);
     this.playMove();
@@ -49,6 +50,10 @@ export class Enemy extends Phaser.GameObjects.Rectangle {
       return;
     }
 
+    if (this.scene.time.now < this.actionLockUntil) {
+      return;
+    }
+
     const key =
       this.enemyType === "tank" ? "enemy-zombie2-move" : "enemy-zombie1-move";
     if (this.visual.anims.currentAnim?.key !== key) {
@@ -56,11 +61,12 @@ export class Enemy extends Phaser.GameObjects.Rectangle {
     }
   }
 
-  playAttack() {
+  playAttack(time = this.scene.time.now) {
     if (!this.visual) {
       return;
     }
 
+    this.actionLockUntil = Math.max(this.actionLockUntil, time + 220);
     const key =
       this.enemyType === "tank"
         ? "enemy-zombie2-attack"
@@ -153,6 +159,7 @@ export class Unit extends Phaser.GameObjects.Rectangle {
     this.moveSpeed = stats.moveSpeed ?? UNIT_STATS.default.moveSpeed;
     this.nextAttackAt = 0;
     this.isAlive = true;
+    this.actionLockUntil = 0;
     this.setVisible(false);
     this.visual = this.createVisual(scene, x, y, this.unitType);
     this.playIdle();
@@ -189,6 +196,10 @@ export class Unit extends Phaser.GameObjects.Rectangle {
       return;
     }
 
+    if (this.scene.time.now < this.actionLockUntil) {
+      return;
+    }
+
     const key =
       this.unitType === UNIT_TYPES.MELEE
         ? "unit-soldier2-move"
@@ -207,6 +218,10 @@ export class Unit extends Phaser.GameObjects.Rectangle {
       return;
     }
 
+    if (this.scene.time.now < this.actionLockUntil) {
+      return;
+    }
+
     const key =
       this.unitType === UNIT_TYPES.MELEE
         ? "unit-soldier2-move"
@@ -214,11 +229,12 @@ export class Unit extends Phaser.GameObjects.Rectangle {
     this.visual.play(key, true);
   }
 
-  playAttack() {
+  playAttack(time = this.scene.time.now) {
     if (!this.visual) {
       return;
     }
 
+    this.actionLockUntil = Math.max(this.actionLockUntil, time + 220);
     const key =
       this.unitType === UNIT_TYPES.MELEE
         ? "unit-soldier2-attack"

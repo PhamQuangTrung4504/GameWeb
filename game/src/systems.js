@@ -22,12 +22,16 @@ export class WaveSystem {
   }
 
   update(deltaMs) {
+    const difficulty = this.scene.getDifficultyConfig?.() ?? null;
+    const spawnIntervalScale = difficulty?.spawnIntervalScale ?? 1;
+    const effectiveSpawnInterval = this.spawnInterval * spawnIntervalScale;
+
     this.timeSinceSpawn += deltaMs;
-    if (this.timeSinceSpawn < this.spawnInterval) {
+    if (this.timeSinceSpawn < effectiveSpawnInterval) {
       return;
     }
 
-    this.timeSinceSpawn -= this.spawnInterval;
+    this.timeSinceSpawn -= effectiveSpawnInterval;
     this.spawnEnemy();
   }
 
@@ -55,6 +59,9 @@ export class WaveSystem {
   createEnemyByWave() {
     const enemyClass = this.pickEnemyClass();
     const baseStats = this.getBaseStats(enemyClass);
+    const difficulty = this.scene.getDifficultyConfig?.() ?? null;
+    const hpScale = difficulty?.enemyHpScale ?? 1;
+    const speedScale = difficulty?.enemySpeedScale ?? 1;
     const hpMultiplier = 1 + this.wave * WAVE_CONFIG.hpScale;
     const speedMultiplier = 1 + this.wave * WAVE_CONFIG.speedScale;
 
@@ -63,8 +70,8 @@ export class WaveSystem {
       this.scene.enemySpawnX,
       this.scene.laneY,
       {
-        hp: Math.round(baseStats.hp * hpMultiplier),
-        speed: baseStats.speed * speedMultiplier,
+        hp: Math.round(baseStats.hp * hpMultiplier * hpScale),
+        speed: baseStats.speed * speedMultiplier * speedScale,
       },
     );
   }
@@ -210,7 +217,8 @@ export class CombatSystem {
       const scaledDamage = this.getScaledUnitDamage(unit.damage, level);
 
       unit.nextAttackAt = time + 1000 / scaledAttackSpeed;
-      unit.playAttack?.();
+      unit.playAttack?.(time);
+      this.playAttackPunch(unit.visual ?? unit);
 
       if (unit.unitType === UNIT_TYPES.MELEE) {
         this.applyDamage(target, scaledDamage);
@@ -263,9 +271,48 @@ export class CombatSystem {
       }
 
       enemy.nextAttackAt = time + 1000 / enemy.attackSpeed;
-      enemy.playAttack?.();
-      this.applyDefenseDamage(target, enemy.attackDamage);
+      enemy.playAttack?.(time);
+      this.playAttackPunch(enemy.visual ?? enemy);
+      const difficulty = this.scene.getDifficultyConfig?.() ?? null;
+      const damageScale = difficulty?.enemyDamageScale ?? 1;
+      const scaledDamage = Math.max(
+        1,
+        Math.round(enemy.attackDamage * damageScale),
+      );
+      this.applyDefenseDamage(target, scaledDamage);
     }
+  }
+
+  playAttackPunch(target) {
+    if (!target || !target.active) {
+      return;
+    }
+
+    const baseScaleX = target.scaleX ?? 1;
+    const facingSign = baseScaleX < 0 ? -1 : 1;
+    const absScaleX = Math.max(0.0001, Math.abs(baseScaleX));
+    const baseScaleY = Math.max(0.0001, Math.abs(target.scaleY ?? 1));
+
+    if (target._attackPunchTween && target._attackPunchTween.isPlaying()) {
+      target._attackPunchTween.stop();
+    }
+
+    target._attackPunchTween = this.scene.tweens.add({
+      targets: target,
+      scaleX: facingSign * absScaleX * 1.1,
+      scaleY: baseScaleY * 0.92,
+      duration: 80,
+      yoyo: true,
+      repeat: 0,
+      ease: "Sine.easeOut",
+      onComplete: () => {
+        if (!target.active) {
+          return;
+        }
+        target.scaleX = facingSign * absScaleX;
+        target.scaleY = baseScaleY;
+      },
+    });
   }
 
   getScaledUnitDamage(baseDamage, level) {
@@ -291,6 +338,12 @@ export class CombatSystem {
     const target = this.findNearestEnemy(player.x, player.rangedRange);
     if (!target) {
       return;
+    }
+
+    const facingDirection = target.x >= player.x ? 1 : -1;
+    if (facingDirection !== this.scene.playerDirection) {
+      this.scene.playerDirection = facingDirection;
+      player.setFlipX(facingDirection < 0);
     }
 
     const distance = Math.abs(target.x - player.x);

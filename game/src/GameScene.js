@@ -30,6 +30,37 @@ import {
 export class GameScene extends Phaser.Scene {
   constructor() {
     super("GameScene");
+
+    this.difficultyPresets = {
+      easy: {
+        label: "Dễ",
+        spawnIntervalScale: 1.25,
+        enemyHpScale: 0.85,
+        enemySpeedScale: 0.9,
+        enemyDamageScale: 0.85,
+      },
+      medium: {
+        label: "Trung bình",
+        spawnIntervalScale: 1,
+        enemyHpScale: 1,
+        enemySpeedScale: 1,
+        enemyDamageScale: 1,
+      },
+      hard: {
+        label: "Khó",
+        spawnIntervalScale: 0.86,
+        enemyHpScale: 1.2,
+        enemySpeedScale: 1.1,
+        enemyDamageScale: 1.2,
+      },
+      extreme: {
+        label: "Siêu cấp khó",
+        spawnIntervalScale: 0.74,
+        enemyHpScale: 1.45,
+        enemySpeedScale: 1.2,
+        enemyDamageScale: 1.45,
+      },
+    };
   }
 
   preload() {
@@ -156,6 +187,7 @@ export class GameScene extends Phaser.Scene {
     this.isGameOver = false;
     this.rangedLevel = 1;
     this.meleeLevel = 1;
+    this.difficultyKey = "medium";
     this.unitCardCooldownMs = UNIT_CARD_COOLDOWN_MS;
     this.rangedCardReadyAt = 0;
     this.meleeCardReadyAt = 0;
@@ -204,6 +236,7 @@ export class GameScene extends Phaser.Scene {
     this.meleeDeploySlots = [250, 370, 510, 620];
 
     this.registry.set("skillCooldownMs", 0);
+    this.registry.set("difficultyOptions", this.getDifficultyOptions());
     this.registry.set("uiMessage", {
       id: 0,
       text: "",
@@ -272,7 +305,44 @@ export class GameScene extends Phaser.Scene {
     this.registry.set("meleeLevel", this.meleeLevel);
     this.registry.set("upgradeCostRanged", upgradeCostRanged);
     this.registry.set("upgradeCostMelee", upgradeCostMelee);
+    this.registry.set("difficulty", this.difficultyKey);
+    this.registry.set(
+      "difficultyLabel",
+      this.difficultyPresets[this.difficultyKey]?.label ?? "Trung bình",
+    );
     this.registry.set("gameOver", this.isGameOver);
+  }
+
+  getDifficultyConfig() {
+    return (
+      this.difficultyPresets[this.difficultyKey] ??
+      this.difficultyPresets.medium
+    );
+  }
+
+  getDifficultyOptions() {
+    return [
+      { key: "easy", label: this.difficultyPresets.easy.label },
+      { key: "medium", label: this.difficultyPresets.medium.label },
+      { key: "hard", label: this.difficultyPresets.hard.label },
+      { key: "extreme", label: this.difficultyPresets.extreme.label },
+    ];
+  }
+
+  setDifficulty(levelKey) {
+    if (!this.difficultyPresets[levelKey]) {
+      return false;
+    }
+
+    this.difficultyKey = levelKey;
+    this.syncUiRegistry();
+    this.pushUiMessage(
+      `Độ khó: ${this.difficultyPresets[levelKey].label}`,
+      this.player ? this.player.x : GAME_WIDTH * 0.5,
+      this.laneY - 120,
+      UI_CONFIG.readyColor,
+    );
+    return true;
   }
 
   getUnitLevel(unitType) {
@@ -536,7 +606,15 @@ export class GameScene extends Phaser.Scene {
   updateEnemies(deltaSeconds) {
     for (let i = this.enemies.length - 1; i >= 0; i -= 1) {
       const enemy = this.enemies[i];
-      enemy.move(deltaSeconds);
+      const target = this.combatSystem?.findNearestDefenseTarget?.(enemy);
+      const targetDistance = target
+        ? Math.abs(enemy.x - target.x)
+        : Number.POSITIVE_INFINITY;
+      const shouldAdvance = !target || targetDistance > enemy.attackRange;
+
+      if (shouldAdvance) {
+        enemy.move(deltaSeconds);
+      }
 
       if (enemy.x <= this.baseX) {
         this.destroyHealthBar(enemy);

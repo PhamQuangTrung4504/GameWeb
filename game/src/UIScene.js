@@ -50,7 +50,7 @@ export class UIScene extends Phaser.Scene {
     this.createWaveHud(topPadding);
     this.createTopRightSkillHud(panelY);
     this.createBottomHud(panelY);
-    this.createFullscreenToggle();
+    this.createSettingsMenu();
 
     this.gameOverText = this.add.text(GAME_WIDTH - 170, topPadding + 102, "", {
       fontFamily: "Georgia",
@@ -66,50 +66,247 @@ export class UIScene extends Phaser.Scene {
     this.feedbackText = null;
   }
 
-  createFullscreenToggle() {
-    this.fullscreenBtnBg = this.add
-      .rectangle(GAME_WIDTH - 56, 24, 92, 30, 0x2b2f34, 0.82)
+  createSettingsMenu() {
+    const btnX = GAME_WIDTH - 96;
+    const btnY = 34;
+    const panelX = GAME_WIDTH * 0.5;
+    const panelTopY = GAME_HEIGHT * 0.5 - 210;
+
+    this.settingsButtonBg = this.add
+      .rectangle(btnX, btnY, 168, 54, 0x2b2f34, 0.9)
       .setOrigin(0.5)
-      .setStrokeStyle(2, 0x8a7858, 0.9)
-      .setDepth(200)
+      .setStrokeStyle(3, 0x8a7858, 0.9)
+      .setDepth(220)
       .setInteractive({ useHandCursor: true });
 
-    this.fullscreenBtnText = this.add
-      .text(GAME_WIDTH - 56, 24, "", {
+    this.settingsButtonText = this.add
+      .text(btnX, btnY, "Setting", {
         fontFamily: "Verdana",
-        fontSize: "12px",
+        fontSize: "20px",
         color: "#f0e5c9",
         fontStyle: "bold",
       })
       .setOrigin(0.5)
-      .setDepth(201);
+      .setDepth(221)
+      .setInteractive({ useHandCursor: true });
 
-    this.fullscreenBtnBg.on("pointerdown", this.toggleFullscreenMode, this);
-    this.fullscreenBtnText.setInteractive({ useHandCursor: true });
-    this.fullscreenBtnText.on("pointerdown", this.toggleFullscreenMode, this);
+    this.settingsMenuOpen = false;
+    this.menuPausedGame = false;
+    this.settingsBackdrop = this.add
+      .rectangle(
+        GAME_WIDTH * 0.5,
+        GAME_HEIGHT * 0.5,
+        GAME_WIDTH,
+        GAME_HEIGHT,
+        0x000000,
+        0.5,
+      )
+      .setDepth(218)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", () => this.setSettingsMenuOpen(false));
 
-    this.scale.on("enterfullscreen", this.refreshFullscreenButtonLabel, this);
-    this.scale.on("leavefullscreen", this.refreshFullscreenButtonLabel, this);
-    this.refreshFullscreenButtonLabel();
+    this.settingsPanel = this.add
+      .rectangle(panelX, panelTopY, 460, 372, 0x252a2f, 0.93)
+      .setOrigin(0.5, 0)
+      .setStrokeStyle(3, 0x8a7858, 0.95)
+      .setDepth(219)
+      .setVisible(false);
+
+    this.settingsTitle = this.add
+      .text(panelX, panelTopY + 20, "MENU", {
+        fontFamily: "Verdana",
+        fontSize: "26px",
+        color: "#f0e5c9",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(221)
+      .setVisible(false);
+
+    this.settingsSubtitle = this.add
+      .text(panelX, panelTopY + 64, "Độ khó", {
+        fontFamily: "Verdana",
+        fontSize: "24px",
+        color: "#d8ccb2",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(221)
+      .setVisible(false);
+
+    const options = this.registry.get("difficultyOptions") ?? [
+      { key: "easy", label: "Dễ" },
+      { key: "medium", label: "Trung bình" },
+      { key: "hard", label: "Khó" },
+      { key: "extreme", label: "Siêu cấp khó" },
+    ];
+
+    this.difficultyMenuItems = [];
+    for (let i = 0; i < options.length; i += 1) {
+      const option = options[i];
+      const y = panelTopY + 108 + i * 48;
+      const item = this.add
+        .text(panelX, y, option.label, {
+          fontFamily: "Verdana",
+          fontSize: "24px",
+          color: "#d8ccb2",
+          fontStyle: "bold",
+        })
+        .setOrigin(0.5, 0)
+        .setDepth(221)
+        .setVisible(false)
+        .setInteractive({ useHandCursor: true })
+        .on("pointerdown", () => this.selectDifficulty(option.key));
+      item._difficultyKey = option.key;
+      this.difficultyMenuItems.push(item);
+    }
+
+    this.fullscreenMenuItem = this.add
+      .text(panelX, panelTopY + 320, "Toàn màn", {
+        fontFamily: "Verdana",
+        fontSize: "24px",
+        color: "#f0e5c9",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(221)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", this.toggleFullscreenFromMenu, this);
+
+    this.settingsButtonBg.on(
+      "pointerdown",
+      (pointer, localX, localY, event) => {
+        event?.stopPropagation?.();
+        this.toggleSettingsMenu();
+      },
+    );
+    this.settingsButtonText.on(
+      "pointerdown",
+      (pointer, localX, localY, event) => {
+        event?.stopPropagation?.();
+        this.toggleSettingsMenu();
+      },
+    );
+    this.input.on("pointerdown", this.handleSettingsOutsideClick, this);
+
+    this.scale.on("enterfullscreen", this.refreshSettingsMenuState, this);
+    this.scale.on("leavefullscreen", this.refreshSettingsMenuState, this);
+    this.refreshSettingsMenuState();
   }
 
-  toggleFullscreenMode() {
+  handleSettingsOutsideClick(pointer) {
+    if (!this.settingsMenuOpen) {
+      return;
+    }
+
+    if (this.isPointerInsideSettingsMenu(pointer)) {
+      return;
+    }
+
+    this.setSettingsMenuOpen(false);
+  }
+
+  isPointerInsideSettingsMenu(pointer) {
+    const inside = (target) => {
+      if (!target || !target.active || !target.visible) {
+        return false;
+      }
+
+      const bounds = target.getBounds?.();
+      if (!bounds) {
+        return false;
+      }
+
+      return Phaser.Geom.Rectangle.Contains(bounds, pointer.x, pointer.y);
+    };
+
+    if (inside(this.settingsButtonBg) || inside(this.settingsButtonText)) {
+      return true;
+    }
+
+    if (!this.settingsMenuOpen) {
+      return false;
+    }
+
+    if (
+      inside(this.settingsPanel) ||
+      inside(this.settingsTitle) ||
+      inside(this.settingsSubtitle) ||
+      inside(this.fullscreenMenuItem)
+    ) {
+      return true;
+    }
+
+    for (const item of this.difficultyMenuItems ?? []) {
+      if (inside(item)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  toggleSettingsMenu() {
+    this.setSettingsMenuOpen(!this.settingsMenuOpen);
+  }
+
+  setSettingsMenuOpen(open) {
+    this.settingsMenuOpen = !!open;
+
+    const gameScene = this.scene.get("GameScene");
+    if (gameScene && !gameScene.isGameOver) {
+      if (this.settingsMenuOpen && !this.menuPausedGame) {
+        gameScene.scene.pause();
+        this.menuPausedGame = true;
+      } else if (!this.settingsMenuOpen && this.menuPausedGame) {
+        gameScene.scene.resume();
+        this.menuPausedGame = false;
+      }
+    }
+
+    this.refreshSettingsMenuState();
+  }
+
+  refreshSettingsMenuState() {
+    const visible = !!this.settingsMenuOpen;
+    this.settingsBackdrop.setVisible(visible);
+    this.settingsPanel.setVisible(visible);
+    this.settingsTitle.setVisible(visible);
+    this.settingsSubtitle.setVisible(visible);
+
+    const currentDifficulty = this.registry.get("difficulty") ?? "medium";
+    for (const item of this.difficultyMenuItems) {
+      item.setVisible(visible);
+      item.setColor(
+        item._difficultyKey === currentDifficulty ? "#8fe38d" : "#d8ccb2",
+      );
+    }
+
+    this.fullscreenMenuItem.setVisible(visible);
+    this.fullscreenMenuItem.setText(
+      this.scale.isFullscreen ? "Thu nhỏ màn" : "Toàn màn",
+    );
+  }
+
+  selectDifficulty(levelKey) {
+    const gameScene = this.scene.get("GameScene");
+    if (!gameScene || gameScene.isGameOver) {
+      return;
+    }
+
+    gameScene.setDifficulty?.(levelKey);
+    this.refreshSettingsMenuState();
+  }
+
+  toggleFullscreenFromMenu() {
     if (this.scale.isFullscreen) {
       this.scale.stopFullscreen();
-      return;
+    } else {
+      this.scale.startFullscreen();
     }
-
-    this.scale.startFullscreen();
-  }
-
-  refreshFullscreenButtonLabel() {
-    if (!this.fullscreenBtnText) {
-      return;
-    }
-
-    this.fullscreenBtnText.setText(
-      this.scale.isFullscreen ? "Thu nhỏ" : "To màn",
-    );
+    this.refreshSettingsMenuState();
   }
 
   createTopLeftHud(topPadding) {
@@ -540,8 +737,6 @@ export class UIScene extends Phaser.Scene {
     if (hp <= 0) {
       this.gameOverText.setText("Defeated");
     }
-
-    this.refreshFullscreenButtonLabel();
   }
 
   animateWaveText() {
