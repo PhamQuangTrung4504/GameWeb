@@ -15,6 +15,7 @@ export class Enemy extends Phaser.GameObjects.Rectangle {
     this.enemyType = stats.enemyType ?? "normal";
     this.isAlive = true;
     this.actionLockUntil = 0;
+    this.nextAttackVisualAt = 0;
     this.setVisible(false);
     this.visual = this.createVisual(scene, x, y, this.enemyType);
     this.playMove();
@@ -23,7 +24,21 @@ export class Enemy extends Phaser.GameObjects.Rectangle {
   }
 
   createVisual(scene, x, y, enemyType) {
-    const textureKey = enemyType === "tank" ? "enemy-zombie2" : "enemy-zombie1";
+    const textureByType = {
+      normal: "enemy-zombie1",
+      fast: "enemy-zombie3",
+      tank: "enemy-zombie2",
+      boss: "enemy-zombieboss1",
+    };
+    const textureKey = textureByType[enemyType] ?? textureByType.normal;
+    const displaySizeByType = {
+      normal: { width: 94, height: 115 },
+      fast: { width: 94, height: 115 },
+      tank: { width: 94, height: 115 },
+      boss: { width: 130, height: 130 },
+    };
+    const displaySize =
+      displaySizeByType[enemyType] ?? displaySizeByType.normal;
     if (!scene.textures.exists(textureKey)) {
       return null;
     }
@@ -32,7 +47,7 @@ export class Enemy extends Phaser.GameObjects.Rectangle {
       .sprite(x, y, textureKey)
       .setOrigin(0.5, 1)
       .setDepth(15)
-      .setDisplaySize(94, 115);
+      .setDisplaySize(displaySize.width, displaySize.height);
     return sprite;
   }
 
@@ -50,12 +65,19 @@ export class Enemy extends Phaser.GameObjects.Rectangle {
       return;
     }
 
+    this.applyVisualSpeed();
+
     if (this.scene.time.now < this.actionLockUntil) {
       return;
     }
 
-    const key =
-      this.enemyType === "tank" ? "enemy-zombie2-move" : "enemy-zombie1-move";
+    const moveAnimByType = {
+      normal: "enemy-zombie1-move",
+      fast: "enemy-zombie3-move",
+      tank: "enemy-zombie2-move",
+      boss: "enemy-zombieboss1-move",
+    };
+    const key = moveAnimByType[this.enemyType] ?? moveAnimByType.normal;
     if (this.visual.anims.currentAnim?.key !== key) {
       this.visual.play(key, true);
     }
@@ -66,12 +88,31 @@ export class Enemy extends Phaser.GameObjects.Rectangle {
       return;
     }
 
-    this.actionLockUntil = Math.max(this.actionLockUntil, time + 220);
-    const key =
-      this.enemyType === "tank"
-        ? "enemy-zombie2-attack"
-        : "enemy-zombie1-attack";
+    const now = this.scene.time.now;
+    if (now < this.nextAttackVisualAt) {
+      return;
+    }
+
+    this.nextAttackVisualAt = now + 110;
+    this.applyVisualSpeed();
+
+    this.actionLockUntil = Math.max(this.actionLockUntil, now + 220);
+    const attackAnimByType = {
+      normal: "enemy-zombie1-attack",
+      fast: "enemy-zombie3-attack",
+      tank: "enemy-zombie2-attack",
+      boss: "enemy-zombieboss1-attack",
+    };
+    const key = attackAnimByType[this.enemyType] ?? attackAnimByType.normal;
     this.visual.play(key, true);
+  }
+
+  applyVisualSpeed() {
+    if (!this.visual) {
+      return;
+    }
+
+    this.visual.anims.timeScale = this.scene.getVisualSpeedMultiplier?.() ?? 1;
   }
 
   setFlipX(value) {
@@ -146,6 +187,16 @@ export class TankEnemy extends Enemy {
   }
 }
 
+export class BossEnemy extends Enemy {
+  constructor(scene, x, y, stats = {}) {
+    super(scene, x, y, {
+      ...ENEMY_STATS.boss,
+      ...stats,
+      enemyType: "boss",
+    });
+  }
+}
+
 export class Unit extends Phaser.GameObjects.Rectangle {
   constructor(scene, x, y, stats = {}) {
     super(scene, x, y, 40, 52, stats.color ?? UNIT_STATS.default.color);
@@ -160,6 +211,7 @@ export class Unit extends Phaser.GameObjects.Rectangle {
     this.nextAttackAt = 0;
     this.isAlive = true;
     this.actionLockUntil = 0;
+    this.nextAttackVisualAt = 0;
     this.setVisible(false);
     this.visual = this.createVisual(scene, x, y, this.unitType);
     this.playIdle();
@@ -196,6 +248,8 @@ export class Unit extends Phaser.GameObjects.Rectangle {
       return;
     }
 
+    this.applyVisualSpeed();
+
     if (this.scene.time.now < this.actionLockUntil) {
       return;
     }
@@ -218,6 +272,8 @@ export class Unit extends Phaser.GameObjects.Rectangle {
       return;
     }
 
+    this.applyVisualSpeed();
+
     if (this.scene.time.now < this.actionLockUntil) {
       return;
     }
@@ -234,12 +290,28 @@ export class Unit extends Phaser.GameObjects.Rectangle {
       return;
     }
 
-    this.actionLockUntil = Math.max(this.actionLockUntil, time + 220);
+    const now = this.scene.time.now;
+    if (now < this.nextAttackVisualAt) {
+      return;
+    }
+
+    this.nextAttackVisualAt = now + 120;
+    this.applyVisualSpeed();
+
+    this.actionLockUntil = Math.max(this.actionLockUntil, now + 220);
     const key =
       this.unitType === UNIT_TYPES.MELEE
         ? "unit-soldier2-attack"
         : "unit-soldier1-attack";
     this.visual.play(key, true);
+  }
+
+  applyVisualSpeed() {
+    if (!this.visual) {
+      return;
+    }
+
+    this.visual.anims.timeScale = this.scene.getVisualSpeedMultiplier?.() ?? 1;
   }
 
   setFlipX(value) {
@@ -321,6 +393,7 @@ export class Player extends Phaser.GameObjects.Rectangle {
     this.respawnAt = 0;
     this.actionState = "idle";
     this.actionLockUntil = 0;
+    this.nextAttackVisualAt = 0;
     this.setVisible(false);
     this.visual = this.createVisual(scene, x, y);
     this.playIdle();
@@ -354,6 +427,8 @@ export class Player extends Phaser.GameObjects.Rectangle {
       return;
     }
 
+    this.applyVisualSpeed();
+
     if (this.scene.time.now < this.actionLockUntil) {
       return;
     }
@@ -369,6 +444,8 @@ export class Player extends Phaser.GameObjects.Rectangle {
       return;
     }
 
+    this.applyVisualSpeed();
+
     if (this.scene.time.now < this.actionLockUntil) {
       return;
     }
@@ -382,8 +459,16 @@ export class Player extends Phaser.GameObjects.Rectangle {
       return;
     }
 
+    const now = this.scene.time.now;
+    if (now < this.nextAttackVisualAt) {
+      return;
+    }
+
+    this.nextAttackVisualAt = now + 140;
+    this.applyVisualSpeed();
+
     this.actionState = "attack-melee";
-    this.actionLockUntil = Math.max(this.actionLockUntil, time + 320);
+    this.actionLockUntil = Math.max(this.actionLockUntil, now + 320);
     this.visual.play("player-main-attack-melee", true);
   }
 
@@ -392,9 +477,25 @@ export class Player extends Phaser.GameObjects.Rectangle {
       return;
     }
 
+    const now = this.scene.time.now;
+    if (now < this.nextAttackVisualAt) {
+      return;
+    }
+
+    this.nextAttackVisualAt = now + 150;
+    this.applyVisualSpeed();
+
     this.actionState = "attack-ranged";
-    this.actionLockUntil = Math.max(this.actionLockUntil, time + 360);
+    this.actionLockUntil = Math.max(this.actionLockUntil, now + 360);
     this.visual.play("player-main-attack-ranged", true);
+  }
+
+  applyVisualSpeed() {
+    if (!this.visual) {
+      return;
+    }
+
+    this.visual.anims.timeScale = this.scene.getVisualSpeedMultiplier?.() ?? 1;
   }
 
   canAttack(time) {

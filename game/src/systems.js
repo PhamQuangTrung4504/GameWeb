@@ -1,4 +1,10 @@
-import { Bullet, FastEnemy, NormalEnemy, TankEnemy } from "./entities.js";
+import {
+  Bullet,
+  BossEnemy,
+  FastEnemy,
+  NormalEnemy,
+  TankEnemy,
+} from "./entities.js";
 import {
   BASE_UPGRADE_COST,
   COST_SCALE,
@@ -77,6 +83,15 @@ export class WaveSystem {
   }
 
   pickEnemyClass() {
+    if (
+      this.wave >= WAVE_CONFIG.bossStartWave &&
+      this.spawnedInWave === this.enemiesPerWave - 1 &&
+      (this.wave - WAVE_CONFIG.bossStartWave) % WAVE_CONFIG.bossWaveInterval ===
+        0
+    ) {
+      return BossEnemy;
+    }
+
     const roll = Math.random();
 
     if (this.wave >= WAVE_CONFIG.lateWaveStart) {
@@ -103,6 +118,10 @@ export class WaveSystem {
   }
 
   getBaseStats(enemyClass) {
+    if (enemyClass === BossEnemy) {
+      return ENEMY_STATS.boss;
+    }
+
     if (enemyClass === FastEnemy) {
       return ENEMY_STATS.fast;
     }
@@ -217,7 +236,7 @@ export class CombatSystem {
       const scaledDamage = this.getScaledUnitDamage(unit.damage, level);
 
       unit.nextAttackAt = time + 1000 / scaledAttackSpeed;
-      unit.playAttack?.(time);
+      unit.playAttack?.();
       this.playAttackPunch(unit.visual ?? unit);
 
       if (unit.unitType === UNIT_TYPES.MELEE) {
@@ -271,7 +290,7 @@ export class CombatSystem {
       }
 
       enemy.nextAttackAt = time + 1000 / enemy.attackSpeed;
-      enemy.playAttack?.(time);
+      enemy.playAttack?.();
       this.playAttackPunch(enemy.visual ?? enemy);
       const difficulty = this.scene.getDifficultyConfig?.() ?? null;
       const damageScale = difficulty?.enemyDamageScale ?? 1;
@@ -294,7 +313,7 @@ export class CombatSystem {
     const baseScaleY = Math.max(0.0001, Math.abs(target.scaleY ?? 1));
 
     if (target._attackPunchTween && target._attackPunchTween.isPlaying()) {
-      target._attackPunchTween.stop();
+      return;
     }
 
     target._attackPunchTween = this.scene.tweens.add({
@@ -350,7 +369,7 @@ export class CombatSystem {
 
     if (distance <= player.meleeRange) {
       player.nextAttackAt = time + 1000 / player.attackSpeed;
-      player.playAttackMelee?.(time);
+      player.playAttackMelee?.();
       this.applyDamage(target, player.meleeDamage);
       return;
     }
@@ -358,7 +377,7 @@ export class CombatSystem {
     player.nextAttackAt =
       time +
       1000 / Math.max(0.2, player.attackSpeed * this.playerRangedCooldownScale);
-    player.playAttackRanged?.(time);
+    player.playAttackRanged?.();
     this.spawnBullet(
       player.x + 22,
       player.y - 10,

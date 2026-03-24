@@ -107,7 +107,7 @@ export class UIScene extends Phaser.Scene {
       .on("pointerdown", () => this.setSettingsMenuOpen(false));
 
     this.settingsPanel = this.add
-      .rectangle(panelX, panelTopY, 460, 372, 0x252a2f, 0.93)
+      .rectangle(panelX, panelTopY, 460, 520, 0x252a2f, 0.93)
       .setOrigin(0.5, 0)
       .setStrokeStyle(3, 0x8a7858, 0.95)
       .setDepth(219)
@@ -162,8 +162,130 @@ export class UIScene extends Phaser.Scene {
       this.difficultyMenuItems.push(item);
     }
 
+    this.speedSubtitle = this.add
+      .text(panelX, panelTopY + 304, "Tốc độ trò chơi", {
+        fontFamily: "Verdana",
+        fontSize: "24px",
+        color: "#d8ccb2",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(221)
+      .setVisible(false);
+
+    this.speedMin = 1;
+    this.speedMax = 3;
+    this.speedStep = 0.05;
+    this.speedSliderTrackWidth = 280;
+    this.speedSliderY = panelTopY + 372;
+
+    this.speedSliderTrack = this.add
+      .rectangle(
+        panelX,
+        this.speedSliderY,
+        this.speedSliderTrackWidth,
+        10,
+        0x14181d,
+        0.95,
+      )
+      .setOrigin(0.5)
+      .setStrokeStyle(1, 0x7a6d57, 0.95)
+      .setDepth(221)
+      .setVisible(false);
+
+    this.speedSliderFill = this.add
+      .rectangle(
+        panelX - this.speedSliderTrackWidth * 0.5,
+        this.speedSliderY,
+        this.speedSliderTrackWidth,
+        10,
+        0x66cc7c,
+        0.95,
+      )
+      .setOrigin(0, 0.5)
+      .setDepth(222)
+      .setVisible(false);
+
+    this.speedSliderKnob = this.add
+      .circle(panelX, this.speedSliderY, 12, 0xf0e5c9, 1)
+      .setStrokeStyle(2, 0x2b2f34, 0.95)
+      .setDepth(223)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+
+    this.speedSliderHitArea = this.add
+      .rectangle(
+        panelX,
+        this.speedSliderY,
+        this.speedSliderTrackWidth + 40,
+        36,
+        0xffffff,
+        0.001,
+      )
+      .setDepth(220)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+
+    this.speedMinLabel = this.add
+      .text(
+        panelX - this.speedSliderTrackWidth * 0.5,
+        this.speedSliderY + 18,
+        "1x",
+        {
+          fontFamily: "Verdana",
+          fontSize: "18px",
+          color: "#b9ae99",
+          fontStyle: "bold",
+        },
+      )
+      .setOrigin(0.5, 0)
+      .setDepth(221)
+      .setVisible(false);
+
+    this.speedMaxLabel = this.add
+      .text(
+        panelX + this.speedSliderTrackWidth * 0.5,
+        this.speedSliderY + 18,
+        "3x",
+        {
+          fontFamily: "Verdana",
+          fontSize: "18px",
+          color: "#b9ae99",
+          fontStyle: "bold",
+        },
+      )
+      .setOrigin(0.5, 0)
+      .setDepth(221)
+      .setVisible(false);
+
+    this.speedValueText = this.add
+      .text(panelX, this.speedSliderY + 48, "1x", {
+        fontFamily: "Verdana",
+        fontSize: "22px",
+        color: "#8fe38d",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(221)
+      .setVisible(false);
+
+    this.speedSliderDragging = false;
+    this.speedSliderTrackLeftX = panelX - this.speedSliderTrackWidth * 0.5;
+    this.speedSliderTrackRightX = panelX + this.speedSliderTrackWidth * 0.5;
+
+    this.speedSliderHitArea.on("pointerdown", (pointer) => {
+      this.speedSliderDragging = true;
+      this.updateSpeedFromPointer(pointer, false);
+    });
+    this.speedSliderKnob.on("pointerdown", (pointer) => {
+      this.speedSliderDragging = true;
+      this.updateSpeedFromPointer(pointer, false);
+    });
+    this.input.on("pointermove", this.handleSpeedSliderDrag, this);
+    this.input.on("pointerup", this.handleSpeedSliderPointerUp, this);
+
     this.fullscreenMenuItem = this.add
-      .text(panelX, panelTopY + 320, "Toàn màn", {
+      .text(panelX, panelTopY + 484, "Toàn màn", {
         fontFamily: "Verdana",
         fontSize: "24px",
         color: "#f0e5c9",
@@ -193,6 +315,15 @@ export class UIScene extends Phaser.Scene {
 
     this.scale.on("enterfullscreen", this.refreshSettingsMenuState, this);
     this.scale.on("leavefullscreen", this.refreshSettingsMenuState, this);
+    document.addEventListener(
+      "fullscreenchange",
+      (this.refreshSettingsMenuStateBound ??= () =>
+        this.refreshSettingsMenuState()),
+    );
+    document.addEventListener(
+      "webkitfullscreenchange",
+      this.refreshSettingsMenuStateBound,
+    );
     this.refreshSettingsMenuState();
   }
 
@@ -234,6 +365,12 @@ export class UIScene extends Phaser.Scene {
       inside(this.settingsPanel) ||
       inside(this.settingsTitle) ||
       inside(this.settingsSubtitle) ||
+      inside(this.speedSubtitle) ||
+      inside(this.speedSliderTrack) ||
+      inside(this.speedSliderFill) ||
+      inside(this.speedSliderHitArea) ||
+      inside(this.speedSliderKnob) ||
+      inside(this.speedValueText) ||
       inside(this.fullscreenMenuItem)
     ) {
       return true;
@@ -246,6 +383,62 @@ export class UIScene extends Phaser.Scene {
     }
 
     return false;
+  }
+
+  handleSpeedSliderDrag(pointer) {
+    if (!this.settingsMenuOpen || !this.speedSliderDragging) {
+      return;
+    }
+
+    this.updateSpeedFromPointer(pointer, false);
+  }
+
+  handleSpeedSliderPointerUp(pointer) {
+    if (!this.speedSliderDragging) {
+      return;
+    }
+
+    this.speedSliderDragging = false;
+    this.updateSpeedFromPointer(pointer, true);
+  }
+
+  updateSpeedFromPointer(pointer, announce) {
+    const value = this.speedFromPointerX(pointer.x);
+    this.selectGameSpeed(value, announce);
+  }
+
+  speedFromPointerX(pointerX) {
+    const clampedX = Phaser.Math.Clamp(
+      pointerX,
+      this.speedSliderTrackLeftX,
+      this.speedSliderTrackRightX,
+    );
+    const ratio = Phaser.Math.Clamp(
+      (clampedX - this.speedSliderTrackLeftX) / this.speedSliderTrackWidth,
+      0,
+      1,
+    );
+    const raw = this.speedMin + (this.speedMax - this.speedMin) * ratio;
+    return Math.round(raw / this.speedStep) * this.speedStep;
+  }
+
+  updateSpeedSliderUi(speed) {
+    const safeSpeed = Phaser.Math.Clamp(
+      speed ?? 1,
+      this.speedMin,
+      this.speedMax,
+    );
+    const ratio = (safeSpeed - this.speedMin) / (this.speedMax - this.speedMin);
+    const knobX =
+      this.speedSliderTrackLeftX + ratio * this.speedSliderTrackWidth;
+    this.speedSliderKnob.x = knobX;
+    this.speedSliderFill.width = Math.max(
+      0,
+      knobX - this.speedSliderTrackLeftX,
+    );
+    this.speedValueText.setText(
+      `${safeSpeed.toFixed(2).replace(/\.00$/, "")}x`,
+    );
   }
 
   toggleSettingsMenu() {
@@ -275,6 +468,14 @@ export class UIScene extends Phaser.Scene {
     this.settingsPanel.setVisible(visible);
     this.settingsTitle.setVisible(visible);
     this.settingsSubtitle.setVisible(visible);
+    this.speedSubtitle.setVisible(visible);
+    this.speedSliderTrack.setVisible(visible);
+    this.speedSliderFill.setVisible(visible);
+    this.speedSliderKnob.setVisible(visible);
+    this.speedSliderHitArea.setVisible(visible);
+    this.speedMinLabel.setVisible(visible);
+    this.speedMaxLabel.setVisible(visible);
+    this.speedValueText.setVisible(visible);
 
     const currentDifficulty = this.registry.get("difficulty") ?? "medium";
     for (const item of this.difficultyMenuItems) {
@@ -284,9 +485,12 @@ export class UIScene extends Phaser.Scene {
       );
     }
 
+    const currentSpeed = this.registry.get("gameSpeed") ?? 1;
+    this.updateSpeedSliderUi(currentSpeed);
+
     this.fullscreenMenuItem.setVisible(visible);
     this.fullscreenMenuItem.setText(
-      this.scale.isFullscreen ? "Thu nhỏ màn" : "Toàn màn",
+      this.isFullscreenActive() ? "Thu nhỏ màn" : "Toàn màn",
     );
   }
 
@@ -300,13 +504,51 @@ export class UIScene extends Phaser.Scene {
     this.refreshSettingsMenuState();
   }
 
-  toggleFullscreenFromMenu() {
-    if (this.scale.isFullscreen) {
-      this.scale.stopFullscreen();
-    } else {
-      this.scale.startFullscreen();
+  selectGameSpeed(speedValue, announce = true) {
+    const gameScene = this.scene.get("GameScene");
+    if (!gameScene || gameScene.isGameOver) {
+      return;
     }
+
+    gameScene.setGameSpeedMultiplier?.(speedValue, { announce });
     this.refreshSettingsMenuState();
+  }
+
+  isFullscreenActive() {
+    return (
+      this.scale.isFullscreen ||
+      !!document.fullscreenElement ||
+      !!document.webkitFullscreenElement
+    );
+  }
+
+  toggleFullscreenFromMenu() {
+    const rootEl = document.getElementById("game-root");
+    if (!rootEl) {
+      return;
+    }
+
+    if (this.isFullscreenActive()) {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      } else if (this.scale.isFullscreen) {
+        this.scale.stopFullscreen();
+      }
+    } else {
+      if (rootEl.requestFullscreen) {
+        rootEl.requestFullscreen().catch(() => {
+          this.scale.startFullscreen();
+        });
+      } else if (rootEl.webkitRequestFullscreen) {
+        rootEl.webkitRequestFullscreen();
+      } else {
+        this.scale.startFullscreen();
+      }
+    }
+
+    this.time.delayedCall(60, () => this.refreshSettingsMenuState());
   }
 
   createTopLeftHud(topPadding) {

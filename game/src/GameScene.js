@@ -158,6 +158,38 @@ export class GameScene extends Phaser.Scene {
         frameHeight: 48,
       },
     );
+    this.load.spritesheet(
+      "enemy-zombie3",
+      "assets/enemy/zombie3_di_chuyen.png",
+      {
+        frameWidth: 48,
+        frameHeight: 48,
+      },
+    );
+    this.load.spritesheet(
+      "enemy-zombie3-attack-sheet",
+      "assets/enemy/zombie3_attack.png",
+      {
+        frameWidth: 48,
+        frameHeight: 48,
+      },
+    );
+    this.load.spritesheet(
+      "enemy-zombieboss1",
+      "assets/enemy/zombieboss1_di_chuyen.png",
+      {
+        frameWidth: 110,
+        frameHeight: 110,
+      },
+    );
+    this.load.spritesheet(
+      "enemy-zombieboss1-attack-sheet",
+      "assets/enemy/zombieboss1_attack.png",
+      {
+        frameWidth: 110,
+        frameHeight: 110,
+      },
+    );
 
     this.load.spritesheet("skill-tornado", "assets/skill/skill_loc_xoay.png", {
       frameWidth: 48,
@@ -188,6 +220,8 @@ export class GameScene extends Phaser.Scene {
     this.rangedLevel = 1;
     this.meleeLevel = 1;
     this.difficultyKey = "medium";
+    this.gameSpeedMultiplier = 1;
+    this.gameClockMs = 0;
     this.unitCardCooldownMs = UNIT_CARD_COOLDOWN_MS;
     this.rangedCardReadyAt = 0;
     this.meleeCardReadyAt = 0;
@@ -259,18 +293,22 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    this.waveSystem.update(deltaMs);
-    this.resourceSystem.update(deltaMs);
-    this.skillSystem.update(time);
+    const scaledDeltaMs = deltaMs * this.gameSpeedMultiplier;
+    this.gameClockMs += scaledDeltaMs;
+    const gameTime = this.gameClockMs;
+
+    this.waveSystem.update(scaledDeltaMs);
+    this.resourceSystem.update(scaledDeltaMs);
+    this.skillSystem.update(gameTime);
     this.handleUpgradeInput();
-    this.updatePlayerRespawn(time);
+    this.updatePlayerRespawn(gameTime);
     this.player.syncVisual?.();
     this.updateEntityHealthBars();
     this.syncUiRegistry();
-    this.updatePlayerMovement(deltaMs / 1000);
+    this.updatePlayerMovement(scaledDeltaMs / 1000);
 
-    this.updateEnemies(deltaMs / 1000);
-    this.combatSystem.update(time, deltaMs);
+    this.updateEnemies(scaledDeltaMs / 1000);
+    this.combatSystem.update(gameTime, scaledDeltaMs);
   }
 
   syncUiRegistry() {
@@ -310,7 +348,58 @@ export class GameScene extends Phaser.Scene {
       "difficultyLabel",
       this.difficultyPresets[this.difficultyKey]?.label ?? "Trung bình",
     );
+    this.registry.set("gameSpeed", this.gameSpeedMultiplier);
     this.registry.set("gameOver", this.isGameOver);
+  }
+
+  getGameTimeMs() {
+    return this.gameClockMs;
+  }
+
+  getVisualSpeedMultiplier() {
+    return Phaser.Math.Clamp(1 + (this.gameSpeedMultiplier - 1) * 0.55, 1, 2.1);
+  }
+
+  setGameSpeedMultiplier(value, options = {}) {
+    const nextValue = Number(value);
+    if (!Number.isFinite(nextValue)) {
+      return false;
+    }
+
+    const clamped = Phaser.Math.Clamp(nextValue, 1, 3);
+    const rounded = Math.round(clamped * 20) / 20;
+    if (Math.abs(this.gameSpeedMultiplier - rounded) < 0.0001) {
+      return true;
+    }
+
+    const announce = options.announce !== false;
+
+    this.gameSpeedMultiplier = rounded;
+    this.refreshVisualSpeed();
+    this.syncUiRegistry();
+
+    if (!announce) {
+      return true;
+    }
+
+    this.pushUiMessage(
+      `Tốc độ: ${rounded.toFixed(2).replace(/\.00$/, "")}x`,
+      this.player ? this.player.x : GAME_WIDTH * 0.5,
+      this.laneY - 120,
+      UI_CONFIG.readyColor,
+    );
+    return true;
+  }
+
+  refreshVisualSpeed() {
+    const apply = (entity) => entity?.applyVisualSpeed?.();
+    apply(this.player);
+    for (const enemy of this.enemies) {
+      apply(enemy);
+    }
+    for (const unit of this.units) {
+      apply(unit);
+    }
   }
 
   getDifficultyConfig() {
@@ -506,7 +595,7 @@ export class GameScene extends Phaser.Scene {
 
     this.addCoin(-unitCost);
 
-    const nextReady = this.time.now + this.unitCardCooldownMs;
+    const nextReady = this.getGameTimeMs() + this.unitCardCooldownMs;
     if (unitType === UNIT_TYPES.MELEE) {
       this.meleeCardReadyAt = nextReady;
     } else {
@@ -545,7 +634,7 @@ export class GameScene extends Phaser.Scene {
 
   setTouchMoveAxisFromPointer(pointer) {
     this.touchMoveAxis = pointer.x < GAME_WIDTH * 0.5 ? -1 : 1;
-    this.touchMoveUntil = this.time.now;
+    this.touchMoveUntil = this.getGameTimeMs();
   }
 
   getPointerMoveAxis() {
@@ -583,7 +672,7 @@ export class GameScene extends Phaser.Scene {
       unitType === UNIT_TYPES.MELEE
         ? this.meleeCardReadyAt
         : this.rangedCardReadyAt;
-    return Math.max(0, readyAt - this.time.now);
+    return Math.max(0, readyAt - this.getGameTimeMs());
   }
 
   spawnUnit(x, unitType) {
@@ -683,7 +772,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.player.isDead = true;
-    this.player.respawnAt = this.time.now + PLAYER_RESPAWN_MS;
+    this.player.respawnAt = this.getGameTimeMs() + PLAYER_RESPAWN_MS;
     this.player.alpha = 0.4;
     if (this.player.visual) {
       this.player.visual.alpha = 0.4;
@@ -906,7 +995,7 @@ export class GameScene extends Phaser.Scene {
     const fx = this.add
       .sprite(x, y + 2, "skill-tornado")
       .setDepth(22)
-      .setDisplaySize(120, 120)
+      .setDisplaySize(240, 240)
       .play("skill-tornado-spin", true);
 
     this.tweens.add({
@@ -932,7 +1021,7 @@ export class GameScene extends Phaser.Scene {
     const fx = this.add
       .sprite(startX, y, "skill-tornado")
       .setDepth(26)
-      .setDisplaySize(136, 136)
+      .setDisplaySize(272, 272)
       .play("skill-tornado-spin", true);
 
     this.tweens.add({
@@ -1111,6 +1200,45 @@ export class GameScene extends Phaser.Scene {
         end: 1,
       }),
       frameRate: 8,
+      repeat: 0,
+      yoyo: true,
+    });
+
+    ensureAnim("enemy-zombie3-move", {
+      frames: this.anims.generateFrameNumbers("enemy-zombie3", {
+        start: 0,
+        end: 1,
+      }),
+      frameRate: 8,
+      repeat: -1,
+    });
+    ensureAnim("enemy-zombie3-attack", {
+      frames: this.anims.generateFrameNumbers("enemy-zombie3-attack-sheet", {
+        start: 0,
+        end: 1,
+      }),
+      frameRate: 10,
+      repeat: 0,
+      yoyo: true,
+    });
+
+    ensureAnim("enemy-zombieboss1-move", {
+      frames: this.anims.generateFrameNumbers("enemy-zombieboss1", {
+        start: 0,
+        end: 1,
+      }),
+      frameRate: 4,
+      repeat: -1,
+    });
+    ensureAnim("enemy-zombieboss1-attack", {
+      frames: this.anims.generateFrameNumbers(
+        "enemy-zombieboss1-attack-sheet",
+        {
+          start: 0,
+          end: 1,
+        },
+      ),
+      frameRate: 6,
       repeat: 0,
       yoyo: true,
     });
