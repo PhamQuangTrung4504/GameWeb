@@ -18,7 +18,7 @@ import {
   STARTING_COIN,
   STARTING_ENERGY,
 } from "./config.js";
-import { MeleeUnit, Player, RangedUnit, Unit } from "./entities.js";
+import { MeleeUnit, PetBird, Player, RangedUnit, Unit } from "./entities.js";
 import {
   CombatSystem,
   ResourceSystem,
@@ -196,9 +196,22 @@ export class GameScene extends Phaser.Scene {
       frameHeight: 48,
     });
     this.load.image("skill-meteor", "assets/skill/skill_thien_thach.png");
+    this.load.spritesheet(
+      "bird-idle-sheet",
+      "assets/pet/bird_bay_tai_cho.png",
+      {
+        frameWidth: 100,
+        frameHeight: 100,
+      },
+    );
+    this.load.spritesheet("bird-attack-sheet", "assets/pet/bird_attack.png", {
+      frameWidth: 100,
+      frameHeight: 100,
+    });
 
     this.load.image("bullet-arrow", "assets/object/mui_ten.png");
     this.load.image("bullet-stone", "assets/object/vien_dat_cua_soldier1.png");
+    this.load.image("bullet-bird", "assets/object/dan_attack cua_bird.png");
     this.load.image("home-castle", "assets/home/castle.png");
     this.load.image("card-soldier1", "assets/card/soldier1_card.png");
     this.load.image("card-soldier2", "assets/card/soldier2_card.png");
@@ -244,6 +257,8 @@ export class GameScene extends Phaser.Scene {
 
     this.spawnUnit(UNIT_STATS.default.x, UNIT_TYPES.RANGED);
     this.player = new Player(this, PLAYER_STATS.x, this.laneY, PLAYER_STATS);
+    this.petBird = new PetBird(this, this.player.x + 62, this.laneY - 108);
+    this.petBird.syncVisual?.();
     this.attachHealthBar(this.player, 84, 12, 0x2b2b2b, 0x36c55a, 88, -8);
     this.playerDirection = 1;
     this.touchMoveAxis = 0;
@@ -409,6 +424,7 @@ export class GameScene extends Phaser.Scene {
   refreshVisualSpeed() {
     const apply = (entity) => entity?.applyVisualSpeed?.();
     apply(this.player);
+    apply(this.petBird);
     for (const enemy of this.enemies) {
       apply(enemy);
     }
@@ -1001,6 +1017,11 @@ export class GameScene extends Phaser.Scene {
 
     this.registry.set("gameOver", true);
 
+    if (this.petBird?.active) {
+      this.petBird.destroy();
+      this.petBird = null;
+    }
+
     const centerX = GAME_WIDTH * 0.5;
 
     this.add
@@ -1457,6 +1478,28 @@ export class GameScene extends Phaser.Scene {
       frameRate: 16,
       repeat: -1,
     });
+
+    if (this.textures.exists("bird-idle-sheet")) {
+      ensureAnim("bird-idle-loop", {
+        frames: this.anims.generateFrameNumbers("bird-idle-sheet", {
+          start: 0,
+          end: 1,
+        }),
+        frameRate: 6,
+        repeat: -1,
+      });
+    }
+
+    if (this.textures.exists("bird-attack-sheet")) {
+      ensureAnim("bird-attack-loop", {
+        frames: this.anims.generateFrameNumbers("bird-attack-sheet", {
+          start: 0,
+          end: 3,
+        }),
+        frameRate: 12,
+        repeat: 0,
+      });
+    }
   }
 
   drawBackground() {

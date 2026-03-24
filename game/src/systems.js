@@ -170,7 +170,52 @@ export class CombatSystem {
     this.updateEnemyAttacks(time);
     this.updateUnitAttacks(time, deltaSeconds);
     this.updatePlayerAttack(time);
+    this.updatePetBirdAttack(time, deltaSeconds);
     this.updateBullets(deltaSeconds);
+  }
+
+  updatePetBirdAttack(time, deltaSeconds) {
+    const pet = this.scene.petBird;
+    const player = this.scene.player;
+    if (
+      !pet ||
+      !pet.active ||
+      !player ||
+      !player.active ||
+      this.scene.isGameOver
+    ) {
+      return;
+    }
+
+    pet.follow?.(player, deltaSeconds);
+
+    const target = this.findNearestEnemy(pet.x, pet.range);
+    if (!target) {
+      pet.playIdle?.();
+      return;
+    }
+
+    const direction = target.x >= pet.x ? 1 : -1;
+    pet.setFlipX(direction < 0);
+
+    if (!pet.canAttack(time)) {
+      pet.playIdle?.();
+      return;
+    }
+
+    pet.nextAttackAt = time + 1000 / pet.attackSpeed;
+    pet.playAttack?.();
+    this.playAttackPunch(pet.visual ?? pet);
+
+    this.spawnBullet(
+      pet.x + direction * 24,
+      pet.y - 2,
+      target,
+      pet.damage,
+      pet.bulletSpeed,
+      0xeaf8ff,
+      "bullet-bird",
+    );
   }
 
   updateUnitAttacks(time, deltaSeconds) {

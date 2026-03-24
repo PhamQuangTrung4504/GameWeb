@@ -560,6 +560,127 @@ export class Player extends Phaser.GameObjects.Rectangle {
   }
 }
 
+export class PetBird extends Phaser.GameObjects.Rectangle {
+  constructor(scene, x, y, stats = {}) {
+    super(scene, x, y, 24, 24, 0xffffff);
+    this.followOffsetX = stats.followOffsetX ?? 62;
+    this.followOffsetY = stats.followOffsetY ?? -108;
+    this.followLerp = stats.followLerp ?? 0.22;
+    this.range = stats.range ?? 420;
+    this.damage = stats.damage ?? 8;
+    this.attackSpeed = stats.attackSpeed ?? 2;
+    this.bulletSpeed = stats.bulletSpeed ?? 460;
+    this.nextAttackAt = 0;
+    this.actionLockUntil = 0;
+    this.nextAttackVisualAt = 0;
+    this.setVisible(false);
+    this.visual = this.createVisual(scene, x, y);
+    this.playIdle();
+
+    scene.add.existing(this);
+  }
+
+  createVisual(scene, x, y) {
+    if (!scene.textures.exists("bird-idle-sheet")) {
+      return null;
+    }
+
+    return scene.add
+      .sprite(x, y, "bird-idle-sheet")
+      .setOrigin(0.5, 1)
+      .setDepth(17)
+      .setDisplaySize(108, 108);
+  }
+
+  follow(owner, deltaSeconds) {
+    if (!owner || !owner.active) {
+      return;
+    }
+
+    const facing = owner.facing ?? 1;
+    const targetX = owner.x + facing * this.followOffsetX;
+    const targetY = owner.y + this.followOffsetY;
+    const smooth =
+      1 - Math.pow(1 - this.followLerp, Math.max(1, deltaSeconds * 60));
+
+    this.x = Phaser.Math.Linear(this.x, targetX, smooth);
+    this.y = Phaser.Math.Linear(this.y, targetY, smooth);
+    this.setFlipX(facing < 0);
+    this.syncVisual();
+  }
+
+  syncVisual() {
+    if (!this.visual) {
+      return;
+    }
+
+    this.visual.x = this.x;
+    this.visual.y = this.y + 24;
+  }
+
+  playIdle() {
+    if (!this.visual) {
+      return;
+    }
+
+    this.applyVisualSpeed();
+
+    if (this.scene.time.now < this.actionLockUntil) {
+      return;
+    }
+
+    if (this.visual.anims.currentAnim?.key !== "bird-idle-loop") {
+      this.visual.play("bird-idle-loop", true);
+    }
+  }
+
+  playAttack() {
+    if (!this.visual) {
+      return;
+    }
+
+    const now = this.scene.time.now;
+    if (now < this.nextAttackVisualAt) {
+      return;
+    }
+
+    this.nextAttackVisualAt = now + 130;
+    this.actionLockUntil = Math.max(this.actionLockUntil, now + 260);
+    this.applyVisualSpeed();
+    this.visual.play("bird-attack-loop", true);
+  }
+
+  canAttack(time) {
+    return time >= this.nextAttackAt;
+  }
+
+  applyVisualSpeed() {
+    if (!this.visual) {
+      return;
+    }
+
+    this.visual.anims.timeScale = this.scene.getVisualSpeedMultiplier?.() ?? 1;
+  }
+
+  setFlipX(value) {
+    this.scaleX = Math.abs(this.scaleX) * (value ? -1 : 1);
+    if (this.visual) {
+      this.visual.setFlipX(value);
+    }
+
+    return this;
+  }
+
+  destroy(fromScene) {
+    if (this.visual) {
+      this.visual.destroy();
+      this.visual = null;
+    }
+
+    super.destroy(fromScene);
+  }
+}
+
 export class Bullet extends Phaser.GameObjects.Arc {
   constructor(scene, x, y, target, stats = {}) {
     super(scene, x, y, 5, 0, 360, false, stats.color ?? 0xfff1a8);
@@ -578,10 +699,17 @@ export class Bullet extends Phaser.GameObjects.Arc {
       return null;
     }
 
+    const displaySizeByTexture = {
+      "bullet-arrow": 20,
+      "bullet-stone": 20,
+      "bullet-bird": 28,
+    };
+    const displaySize = displaySizeByTexture[textureKey] ?? 20;
+
     const image = scene.add
       .image(x, y, textureKey)
       .setDepth(19)
-      .setDisplaySize(20, 20);
+      .setDisplaySize(displaySize, displaySize);
 
     return image;
   }
