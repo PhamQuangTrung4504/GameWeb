@@ -158,6 +158,11 @@ export const SKILL_CONFIG = {
   energyCost: 5,
   tornadoDamage: 26,
   tornadoKnockback: 48,
+  meteorKey: "E",
+  meteorCooldownMs: 18000,
+  meteorEnergyCost: 7,
+  meteorDamage: 86,
+  meteorRadius: 132,
 };
 
 export const UI_CONFIG = {

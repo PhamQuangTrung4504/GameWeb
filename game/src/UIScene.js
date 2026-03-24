@@ -51,6 +51,7 @@ export class UIScene extends Phaser.Scene {
     this.createTopRightSkillHud(panelY);
     this.createBottomHud(panelY);
     this.createSettingsMenu();
+    this.input.on("pointerdown", this.handleSkillPointerFallback, this);
 
     this.gameOverText = this.add.text(GAME_WIDTH - 170, topPadding + 102, "", {
       fontFamily: "Georgia",
@@ -464,6 +465,12 @@ export class UIScene extends Phaser.Scene {
 
   refreshSettingsMenuState() {
     const visible = !!this.settingsMenuOpen;
+    const setInputEnabled = (target, enabled) => {
+      if (target?.input) {
+        target.input.enabled = enabled;
+      }
+    };
+
     this.settingsBackdrop.setVisible(visible);
     this.settingsPanel.setVisible(visible);
     this.settingsTitle.setVisible(visible);
@@ -476,10 +483,15 @@ export class UIScene extends Phaser.Scene {
     this.speedMinLabel.setVisible(visible);
     this.speedMaxLabel.setVisible(visible);
     this.speedValueText.setVisible(visible);
+    setInputEnabled(this.settingsBackdrop, visible);
+    setInputEnabled(this.speedSliderHitArea, visible);
+    setInputEnabled(this.speedSliderKnob, visible);
+    setInputEnabled(this.fullscreenMenuItem, visible);
 
     const currentDifficulty = this.registry.get("difficulty") ?? "medium";
     for (const item of this.difficultyMenuItems) {
       item.setVisible(visible);
+      setInputEnabled(item, visible);
       item.setColor(
         item._difficultyKey === currentDifficulty ? "#8fe38d" : "#d8ccb2",
       );
@@ -695,30 +707,81 @@ export class UIScene extends Phaser.Scene {
 
   createTopRightSkillHud(panelY) {
     const cardY = panelY + UI_CONFIG.panelHeight * 0.5 - 52;
-    const skillCenterX = GAME_WIDTH - 220;
+    const tornadoCenterX = GAME_WIDTH - 292;
+    const meteorCenterX = GAME_WIDTH - 150;
     const skillCenterY = cardY;
 
     if (this.textures.exists("skill-icon-tornado")) {
       this.skillIcon = this.add
-        .image(skillCenterX, skillCenterY, "skill-icon-tornado")
-        .setDisplaySize(128, 128)
+        .image(tornadoCenterX, skillCenterY, "skill-icon-tornado")
+        .setDisplaySize(98, 98)
         .setAlpha(0.9)
         .setDepth(3);
     } else {
       this.skillIcon = this.add
-        .rectangle(skillCenterX, skillCenterY, 128, 128, 0x5d7eb6, 0.82)
+        .rectangle(tornadoCenterX, skillCenterY, 116, 116, 0x5d7eb6, 0.82)
         .setStrokeStyle(2, 0x95b7f1, 0.95)
         .setDepth(3);
     }
 
-    this.skillIcon.setInteractive({ useHandCursor: true });
-    this.skillIcon.on("pointerdown", this.handleSkillIconTap, this);
+    if (this.textures.exists("skill-icon-meteor")) {
+      this.meteorSkillIcon = this.add
+        .image(meteorCenterX, skillCenterY, "skill-icon-meteor")
+        .setDisplaySize(98, 98)
+        .setAlpha(0.9)
+        .setDepth(3);
+    } else {
+      this.meteorSkillIcon = this.add
+        .circle(meteorCenterX, skillCenterY, 56, 0xcf2a2a, 0.9)
+        .setDepth(3);
+    }
+
+    this.skillTapZone = this.add
+      .circle(tornadoCenterX, skillCenterY, 58, 0xffffff, 0.001)
+      .setDepth(6)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", this.handleSkillIconTap, this);
+
+    this.meteorSkillTapZone = this.add
+      .circle(meteorCenterX, skillCenterY, 58, 0xffffff, 0.001)
+      .setDepth(6)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", this.handleMeteorSkillTap, this);
+
+    this.skillTapCenterX = tornadoCenterX;
+    this.skillTapCenterY = skillCenterY;
+    this.meteorTapCenterX = meteorCenterX;
+    this.meteorTapCenterY = skillCenterY;
+    this.skillTapRadius = 58;
+    this.lastTornadoUiTapMs = -1000;
+    this.lastMeteorUiTapMs = -1000;
+
+    this.skillIconBaseScaleX = this.skillIcon.scaleX || 1;
+    this.skillIconBaseScaleY = this.skillIcon.scaleY || 1;
+    this.meteorSkillIconBaseScaleX = this.meteorSkillIcon.scaleX || 1;
+    this.meteorSkillIconBaseScaleY = this.meteorSkillIcon.scaleY || 1;
 
     this.skillMetaText = this.add
       .text(
-        skillCenterX,
+        tornadoCenterX,
         skillCenterY + 74,
-        `Tốn ${SKILL_CONFIG.energyCost} cost - Q`,
+        `Q - ${SKILL_CONFIG.energyCost} EN`,
+        {
+          fontFamily: "Verdana",
+          fontSize: "14px",
+          color: "#f0e5c9",
+          fontStyle: "bold",
+          stroke: "#2f261b",
+          strokeThickness: 2,
+        },
+      )
+      .setOrigin(0.5, 0);
+
+    this.meteorSkillMetaText = this.add
+      .text(
+        meteorCenterX,
+        skillCenterY + 74,
+        `E - ${SKILL_CONFIG.meteorEnergyCost} EN`,
         {
           fontFamily: "Verdana",
           fontSize: "14px",
@@ -731,13 +794,79 @@ export class UIScene extends Phaser.Scene {
       .setOrigin(0.5, 0);
   }
 
-  handleSkillIconTap() {
+  handleSkillIconTap(pointer, localX, localY, event) {
+    event?.stopPropagation?.();
+
+    this.tryCastTornadoFromUi();
+  }
+
+  tryCastTornadoFromUi() {
+    const now = this.time.now;
+    if (now - this.lastTornadoUiTapMs < 90) {
+      return;
+    }
+
+    this.lastTornadoUiTapMs = now;
+
     const gameScene = this.scene.get("GameScene");
     if (!gameScene || gameScene.isGameOver || !gameScene.skillSystem) {
       return;
     }
 
-    gameScene.skillSystem.tryCast(gameScene.time.now);
+    gameScene.skillSystem.tryCast(gameScene.getGameTimeMs());
+  }
+
+  handleMeteorSkillTap(pointer, localX, localY, event) {
+    event?.stopPropagation?.();
+
+    this.tryCastMeteorFromUi();
+  }
+
+  tryCastMeteorFromUi() {
+    const now = this.time.now;
+    if (now - this.lastMeteorUiTapMs < 90) {
+      return;
+    }
+
+    this.lastMeteorUiTapMs = now;
+
+    const gameScene = this.scene.get("GameScene");
+    if (!gameScene || gameScene.isGameOver || !gameScene.skillSystem) {
+      return;
+    }
+
+    gameScene.skillSystem.tryCastMeteor(gameScene.getGameTimeMs());
+  }
+
+  handleSkillPointerFallback(pointer) {
+    if (!pointer || this.settingsMenuOpen) {
+      return;
+    }
+
+    const inTornadoZone =
+      Phaser.Math.Distance.Between(
+        pointer.x,
+        pointer.y,
+        this.skillTapCenterX,
+        this.skillTapCenterY,
+      ) <= this.skillTapRadius;
+
+    if (inTornadoZone) {
+      this.tryCastTornadoFromUi();
+      return;
+    }
+
+    const inMeteorZone =
+      Phaser.Math.Distance.Between(
+        pointer.x,
+        pointer.y,
+        this.meteorTapCenterX,
+        this.meteorTapCenterY,
+      ) <= this.skillTapRadius;
+
+    if (inMeteorZone) {
+      this.tryCastMeteorFromUi();
+    }
   }
 
   createBottomHud(panelY) {
@@ -860,7 +989,12 @@ export class UIScene extends Phaser.Scene {
       this.registry.get("skillCooldown") ??
       this.registry.get("skillCooldownMs") ??
       0;
+    const meteorCooldownMs =
+      this.registry.get("meteorSkillCooldown") ??
+      this.registry.get("meteorSkillCooldownMs") ??
+      0;
     const skillReady = this.registry.get("skillReady") ?? false;
+    const meteorSkillReady = this.registry.get("meteorSkillReady") ?? false;
     const rangedCardCooldownMs = this.registry.get("rangedCardCooldownMs") ?? 0;
     const meleeCardCooldownMs = this.registry.get("meleeCardCooldownMs") ?? 0;
     const rangedUnitCost =
@@ -913,7 +1047,70 @@ export class UIScene extends Phaser.Scene {
     this.waveText.setText(`WAVE ${wave}`);
 
     const skillAvailable = cooldownMs <= 0 && skillReady;
-    this.skillIcon.setAlpha(skillAvailable ? 0.95 : 0.35);
+    const meteorSkillAvailable = meteorCooldownMs <= 0 && meteorSkillReady;
+    const skillCooldownProgress = Phaser.Math.Clamp(
+      1 - cooldownMs / Math.max(1, SKILL_CONFIG.cooldownMs),
+      0,
+      1,
+    );
+    const meteorCooldownProgress = Phaser.Math.Clamp(
+      1 - meteorCooldownMs / Math.max(1, SKILL_CONFIG.meteorCooldownMs),
+      0,
+      1,
+    );
+
+    const skillAlpha = skillAvailable
+      ? 1
+      : Phaser.Math.Linear(0.28, 0.8, skillCooldownProgress);
+    const meteorAlpha = meteorSkillAvailable
+      ? 1
+      : Phaser.Math.Linear(0.28, 0.8, meteorCooldownProgress);
+
+    this.skillIcon.setAlpha(skillAlpha);
+    this.meteorSkillIcon.setAlpha(meteorAlpha);
+
+    if (skillAvailable) {
+      this.skillMetaText.setColor("#f6edbf");
+      this.skillMetaText.setText(`Q - ${SKILL_CONFIG.energyCost} EN`);
+    } else if (cooldownMs > 0) {
+      this.skillMetaText.setColor("#d9c18a");
+      this.skillMetaText.setText(`Q - ${(cooldownMs / 1000).toFixed(1)}s`);
+    } else {
+      this.skillMetaText.setColor("#d28d8d");
+      this.skillMetaText.setText(`Q - ${SKILL_CONFIG.energyCost} EN`);
+    }
+
+    if (meteorSkillAvailable) {
+      this.meteorSkillMetaText.setColor("#f6edbf");
+      this.meteorSkillMetaText.setText(
+        `E - ${SKILL_CONFIG.meteorEnergyCost} EN`,
+      );
+    } else if (meteorCooldownMs > 0) {
+      this.meteorSkillMetaText.setColor("#d9c18a");
+      this.meteorSkillMetaText.setText(
+        `E - ${(meteorCooldownMs / 1000).toFixed(1)}s`,
+      );
+    } else {
+      this.meteorSkillMetaText.setColor("#d28d8d");
+      this.meteorSkillMetaText.setText(
+        `E - ${SKILL_CONFIG.meteorEnergyCost} EN`,
+      );
+    }
+
+    const pulseScale = skillAvailable
+      ? 1 + Math.sin(this.time.now * 0.012) * 0.03
+      : 1;
+    const meteorPulseScale = meteorSkillAvailable
+      ? 1 + Math.sin(this.time.now * 0.012 + 0.6) * 0.03
+      : 1;
+    this.skillIcon.setScale(
+      this.skillIconBaseScaleX * pulseScale,
+      this.skillIconBaseScaleY * pulseScale,
+    );
+    this.meteorSkillIcon.setScale(
+      this.meteorSkillIconBaseScaleX * meteorPulseScale,
+      this.meteorSkillIconBaseScaleY * meteorPulseScale,
+    );
 
     const rangedUpgradeColor =
       coin >= upgradeCostRanged

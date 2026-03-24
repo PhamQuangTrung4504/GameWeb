@@ -195,6 +195,7 @@ export class GameScene extends Phaser.Scene {
       frameWidth: 48,
       frameHeight: 48,
     });
+    this.load.image("skill-meteor", "assets/skill/skill_thien_thach.png");
 
     this.load.image("bullet-arrow", "assets/object/mui_ten.png");
     this.load.image("bullet-stone", "assets/object/vien_dat_cua_soldier1.png");
@@ -206,6 +207,11 @@ export class GameScene extends Phaser.Scene {
       "skill-icon-tornado",
       "assets/object/icon_skill_loc_xoay.png",
     );
+    this.load.image(
+      "skill-icon-meteor",
+      "assets/object/icon_skill_thien_thach.png",
+    );
+    this.load.image("skill-meteor-impact", "assets/object/hoat_anh_no.png");
   }
 
   create() {
@@ -270,6 +276,7 @@ export class GameScene extends Phaser.Scene {
     this.meleeDeploySlots = [250, 370, 510, 620];
 
     this.registry.set("skillCooldownMs", 0);
+    this.registry.set("meteorSkillCooldownMs", 0);
     this.registry.set("difficultyOptions", this.getDifficultyOptions());
     this.registry.set("uiMessage", {
       id: 0,
@@ -284,6 +291,7 @@ export class GameScene extends Phaser.Scene {
     this.input.on("pointermove", this.handlePointerMoveControl, this);
     this.input.on("pointerup", this.handlePointerUpControl, this);
     this.input.keyboard.on("keydown-Q", this.handleSkillHotkeyFeedback, this);
+    this.input.keyboard.on("keydown-E", this.handleMeteorHotkeyFeedback, this);
 
     this.scene.launch("UIScene");
   }
@@ -315,6 +323,11 @@ export class GameScene extends Phaser.Scene {
     const skillCooldownMs = this.registry.get("skillCooldownMs") ?? 0;
     const skillReady =
       skillCooldownMs <= 0 && this.energy >= SKILL_CONFIG.energyCost;
+    const meteorSkillCooldownMs =
+      this.registry.get("meteorSkillCooldownMs") ?? 0;
+    const meteorSkillReady =
+      meteorSkillCooldownMs <= 0 &&
+      this.energy >= SKILL_CONFIG.meteorEnergyCost;
     const rangedCardCooldownMs = this.getUnitCardCooldownMs(UNIT_TYPES.RANGED);
     const meleeCardCooldownMs = this.getUnitCardCooldownMs(UNIT_TYPES.MELEE);
     const rangedUnitCost = this.getUnitDeployCost(UNIT_TYPES.RANGED);
@@ -335,6 +348,8 @@ export class GameScene extends Phaser.Scene {
     this.registry.set("wave", this.wave);
     this.registry.set("skillCooldown", skillCooldownMs);
     this.registry.set("skillReady", skillReady);
+    this.registry.set("meteorSkillCooldown", meteorSkillCooldownMs);
+    this.registry.set("meteorSkillReady", meteorSkillReady);
     this.registry.set("rangedCardCooldownMs", rangedCardCooldownMs);
     this.registry.set("meleeCardCooldownMs", meleeCardCooldownMs);
     this.registry.set("unitCostRanged", rangedUnitCost);
@@ -499,6 +514,32 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.energy < SKILL_CONFIG.energyCost) {
+      this.pushUiMessage(
+        "Not enough energy",
+        this.player.x,
+        this.player.y - 84,
+        UI_CONFIG.warningColor,
+      );
+    }
+  }
+
+  handleMeteorHotkeyFeedback() {
+    if (this.isGameOver) {
+      return;
+    }
+
+    const cooldownMs = this.registry.get("meteorSkillCooldownMs") ?? 0;
+    if (cooldownMs > 0) {
+      this.pushUiMessage(
+        "Meteor on cooldown",
+        this.player.x,
+        this.player.y - 84,
+        UI_CONFIG.warningColor,
+      );
+      return;
+    }
+
+    if (this.energy < SKILL_CONFIG.meteorEnergyCost) {
       this.pushUiMessage(
         "Not enough energy",
         this.player.x,
@@ -742,14 +783,21 @@ export class GameScene extends Phaser.Scene {
     this.showDamageText(this.baseX + 6, this.laneY - 62, damage, "#f2d4d4", 14);
   }
 
-  onEntityDamaged(entity, damage) {
+  onEntityDamaged(entity, damage, options = {}) {
     if (!entity || !entity.active) {
       return;
     }
 
     this.showDamageText(entity.x, entity.y - 36, damage);
-    this.flashObject(entity.visual ?? entity);
-    this.flashObject(entity.healthBarFill);
+
+    const isDefenseEntity = entity === this.player || !!entity.unitType;
+    if (options.isZombieHit && isDefenseEntity) {
+      this.flashRedHit(entity.visual ?? entity, {
+        durationMs: 150,
+        minAlpha: 0.95,
+        tint: 0xffb3b3,
+      });
+    }
   }
 
   removeUnit(unit) {
@@ -773,10 +821,9 @@ export class GameScene extends Phaser.Scene {
 
     this.player.isDead = true;
     this.player.respawnAt = this.getGameTimeMs() + PLAYER_RESPAWN_MS;
-    this.player.alpha = 0.4;
-    if (this.player.visual) {
-      this.player.visual.alpha = 0.4;
-    }
+    this.clearRedHit(this.player);
+    this.clearRedHit(this.player.visual);
+    this.clearRedHit(this.player.healthBarFill);
     this.pushUiMessage(
       "Player down - respawning",
       this.player.x,
@@ -894,22 +941,49 @@ export class GameScene extends Phaser.Scene {
     entity.healthBarFill.width = entity.healthBarWidth * ratio;
   }
 
-  flashObject(target) {
+  flashRedHit(target, options = {}) {
     if (!target || !target.active) {
       return;
     }
 
-    if (target._flashTween && target._flashTween.isPlaying()) {
-      target._flashTween.stop();
+    const durationMs = options.durationMs ?? 150;
+    const minAlpha = options.minAlpha ?? 0.88;
+    const tint = options.tint ?? 0xff8e8e;
+
+    this.clearRedHit(target);
+
+    target._baseAlpha = target._baseAlpha ?? target.alpha ?? 1;
+    if (typeof target.setTint === "function") {
+      target.setTint(tint);
     }
 
-    target._flashTween = this.tweens.add({
+    target._redHitTween = this.tweens.add({
       targets: target,
-      alpha: 0.35,
+      alpha: Math.max(0.4, Math.min(1, minAlpha)),
       yoyo: true,
-      duration: 80,
+      duration: Math.max(75, Math.floor(durationMs * 0.5)),
       repeat: 0,
+      ease: "Sine.easeInOut",
+      onComplete: () => this.clearRedHit(target),
     });
+  }
+
+  clearRedHit(target) {
+    if (!target) {
+      return;
+    }
+
+    if (target._redHitTween && target._redHitTween.isPlaying()) {
+      target._redHitTween.stop();
+    }
+
+    if (typeof target.clearTint === "function") {
+      target.clearTint();
+    }
+
+    const baseAlpha = target._baseAlpha ?? 1;
+    target.alpha = baseAlpha;
+    target._redHitTween = null;
   }
 
   endGame() {
@@ -918,6 +992,7 @@ export class GameScene extends Phaser.Scene {
     this.input.off("pointermove", this.handlePointerMoveControl, this);
     this.input.off("pointerup", this.handlePointerUpControl, this);
     this.input.keyboard.off("keydown-Q", this.handleSkillHotkeyFeedback, this);
+    this.input.keyboard.off("keydown-E", this.handleMeteorHotkeyFeedback, this);
 
     for (let i = this.bullets.length - 1; i >= 0; i -= 1) {
       this.bullets[i].destroy();
@@ -1055,6 +1130,137 @@ export class GameScene extends Phaser.Scene {
         }
       },
     });
+  }
+
+  launchMeteorStrike() {
+    const target = this.findMeteorTarget();
+    if (!target) {
+      this.pushUiMessage(
+        "No target for meteor",
+        this.player ? this.player.x : GAME_WIDTH * 0.5,
+        this.laneY - 88,
+        UI_CONFIG.warningColor,
+      );
+      return false;
+    }
+
+    const targetX = Phaser.Math.Clamp(target.x, 64, GAME_WIDTH - 64);
+    const targetY = this.laneY + 6;
+    const startX = Phaser.Math.Clamp(targetX - 320, 48, GAME_WIDTH - 48);
+    const startY = -140;
+
+    let meteor = null;
+    if (this.textures.exists("skill-meteor")) {
+      meteor = this.add
+        .image(startX, startY, "skill-meteor")
+        .setDepth(28)
+        .setDisplaySize(360, 360)
+        .setAlpha(0.95);
+    } else {
+      meteor = this.add.circle(startX, startY, 88, 0xffa126, 0.95).setDepth(28);
+    }
+
+    this.tweens.add({
+      targets: meteor,
+      x: targetX,
+      y: targetY,
+      angle: meteor.angle + 26,
+      scaleX: (meteor.scaleX ?? 1) * 0.9,
+      scaleY: (meteor.scaleY ?? 1) * 0.9,
+      duration: 560,
+      ease: "Quad.easeIn",
+      onComplete: () => {
+        if (meteor?.active) {
+          meteor.destroy();
+        }
+        this.triggerMeteorImpact(targetX, targetY);
+      },
+    });
+
+    return true;
+  }
+
+  findMeteorTarget() {
+    let nearest = null;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    const originX = this.player?.active ? this.player.x : this.baseX;
+
+    for (const enemy of this.enemies) {
+      if (!enemy || !enemy.active || !enemy.isAlive) {
+        continue;
+      }
+
+      const distanceToOrigin = Math.abs(enemy.x - originX);
+      if (distanceToOrigin < nearestDistance) {
+        nearest = enemy;
+        nearestDistance = distanceToOrigin;
+      }
+    }
+
+    return nearest;
+  }
+
+  triggerMeteorImpact(x, y) {
+    const impacted = [];
+    for (const enemy of this.enemies) {
+      if (!enemy || !enemy.active || !enemy.isAlive) {
+        continue;
+      }
+
+      if (Math.abs(enemy.x - x) > SKILL_CONFIG.meteorRadius) {
+        continue;
+      }
+
+      impacted.push(enemy);
+    }
+
+    for (const enemy of impacted) {
+      this.combatSystem.applyDamage(enemy, SKILL_CONFIG.meteorDamage);
+      this.playHitEffect(enemy.visual ?? enemy);
+    }
+
+    const impactY = y - 32;
+    const blastTextureExists = this.textures.exists("skill-meteor-impact");
+    if (blastTextureExists) {
+      const blast = this.add
+        .image(x, impactY, "skill-meteor-impact")
+        .setDepth(29)
+        .setDisplaySize(128, 128)
+        .setTint(0xfff3bf)
+        .setAlpha(0.95);
+
+      const blastGlow = this.add
+        .image(x, impactY, "skill-meteor-impact")
+        .setDepth(30)
+        .setDisplaySize(186, 186)
+        .setTint(0xffd46b)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setAlpha(0.72);
+
+      this.tweens.add({
+        targets: blastGlow,
+        displayWidth: 360,
+        displayHeight: 360,
+        alpha: 0,
+        duration: 320,
+        ease: "Sine.easeOut",
+        onComplete: () => blastGlow.destroy(),
+      });
+
+      this.tweens.add({
+        targets: blast,
+        displayWidth: 480,
+        displayHeight: 480,
+        alpha: 0,
+        duration: 520,
+        ease: "Sine.easeOut",
+        onComplete: () => blast.destroy(),
+      });
+    }
+
+    this.showDamageText(x, impactY - 96, "METEOR", "#ffd36e", 24);
+
+    this.cameras.main.shake(160, 0.006);
   }
 
   liftEnemy(enemy, durationMs = 500) {

@@ -443,7 +443,7 @@ export class CombatSystem {
     }
 
     const died = target.takeDamage(damage);
-    this.scene.onEntityDamaged(target, damage);
+    this.scene.onEntityDamaged(target, damage, { isZombieHit: true });
     if (!died) {
       return;
     }
@@ -525,7 +525,9 @@ export class SkillSystem {
   constructor(scene) {
     this.scene = scene;
     this.lastUsedAt = -SKILL_CONFIG.cooldownMs;
+    this.lastMeteorUsedAt = -SKILL_CONFIG.meteorCooldownMs;
     this.keyQ = scene.input.keyboard.addKey(SKILL_CONFIG.key);
+    this.keyE = scene.input.keyboard.addKey(SKILL_CONFIG.meteorKey);
   }
 
   update(time) {
@@ -533,13 +535,44 @@ export class SkillSystem {
       0,
       SKILL_CONFIG.cooldownMs - (time - this.lastUsedAt),
     );
+    const meteorCooldownRemaining = Math.max(
+      0,
+      SKILL_CONFIG.meteorCooldownMs - (time - this.lastMeteorUsedAt),
+    );
     this.scene.registry.set("skillCooldownMs", Math.ceil(cooldownRemaining));
+    this.scene.registry.set(
+      "meteorSkillCooldownMs",
+      Math.ceil(meteorCooldownRemaining),
+    );
 
-    if (!Phaser.Input.Keyboard.JustDown(this.keyQ)) {
-      return;
+    if (Phaser.Input.Keyboard.JustDown(this.keyQ)) {
+      this.tryCast(time);
     }
 
-    this.tryCast(time);
+    if (Phaser.Input.Keyboard.JustDown(this.keyE)) {
+      this.tryCastMeteor(time);
+    }
+  }
+
+  isTornadoReady(time) {
+    const cooldownRemaining = Math.max(
+      0,
+      SKILL_CONFIG.cooldownMs - (time - this.lastUsedAt),
+    );
+    return (
+      cooldownRemaining <= 0 && this.scene.energy >= SKILL_CONFIG.energyCost
+    );
+  }
+
+  isMeteorReady(time) {
+    const cooldownRemaining = Math.max(
+      0,
+      SKILL_CONFIG.meteorCooldownMs - (time - this.lastMeteorUsedAt),
+    );
+    return (
+      cooldownRemaining <= 0 &&
+      this.scene.energy >= SKILL_CONFIG.meteorEnergyCost
+    );
   }
 
   tryCast(time) {
@@ -565,6 +598,33 @@ export class SkillSystem {
     return true;
   }
 
+  tryCastMeteor(time) {
+    const cooldownRemaining = Math.max(
+      0,
+      SKILL_CONFIG.meteorCooldownMs - (time - this.lastMeteorUsedAt),
+    );
+
+    if (cooldownRemaining > 0) {
+      this.scene.handleMeteorHotkeyFeedback?.();
+      return false;
+    }
+
+    if (this.scene.energy < SKILL_CONFIG.meteorEnergyCost) {
+      this.scene.showDamageText(420, 104, "Need energy", "#7d1d1d", 18);
+      this.scene.handleMeteorHotkeyFeedback?.();
+      return false;
+    }
+
+    const didCast = this.castMeteor();
+    if (!didCast) {
+      return false;
+    }
+
+    this.scene.addEnergy(-SKILL_CONFIG.meteorEnergyCost);
+    this.lastMeteorUsedAt = time;
+    return true;
+  }
+
   castTornado() {
     if (typeof this.scene.launchTornadoSweep === "function") {
       this.scene.launchTornadoSweep();
@@ -574,6 +634,14 @@ export class SkillSystem {
     const laneCenterY = this.scene.laneY;
     const sceneWidth = this.scene.scale.width;
     this.scene.playSkillFx?.(sceneWidth * 0.5, laneCenterY);
+  }
+
+  castMeteor() {
+    if (typeof this.scene.launchMeteorStrike === "function") {
+      return this.scene.launchMeteorStrike();
+    }
+
+    return false;
   }
 }
 
