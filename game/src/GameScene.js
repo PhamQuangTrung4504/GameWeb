@@ -212,6 +212,7 @@ export class GameScene extends Phaser.Scene {
     this.load.image("bullet-arrow", "assets/object/mui_ten.png");
     this.load.image("bullet-stone", "assets/object/vien_dat_cua_soldier1.png");
     this.load.image("bullet-bird", "assets/object/dan_attack cua_bird.png");
+    this.load.image("map-main", "assets/map/map1.png");
     this.load.image("home-castle", "assets/home/castle.png");
     this.load.image("card-soldier1", "assets/card/soldier1_card.png");
     this.load.image("card-soldier2", "assets/card/soldier2_card.png");
@@ -1503,14 +1504,21 @@ export class GameScene extends Phaser.Scene {
   }
 
   drawBackground() {
-    this.add.rectangle(
-      GAME_WIDTH * 0.5,
-      this.laneY,
-      GAME_WIDTH,
-      130,
-      0xb08f57,
-      0.5,
-    );
+    if (this.textures.exists("map-main")) {
+      this.add
+        .image(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.5, "map-main")
+        .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+        .setDepth(0);
+    } else {
+      this.add.rectangle(
+        GAME_WIDTH * 0.5,
+        this.laneY,
+        GAME_WIDTH,
+        130,
+        0xb08f57,
+        0.5,
+      );
+    }
 
     if (this.textures.exists("home-castle")) {
       this.add

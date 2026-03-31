@@ -700,9 +700,9 @@ export class Bullet extends Phaser.GameObjects.Arc {
     }
 
     const displaySizeByTexture = {
-      "bullet-arrow": 20,
-      "bullet-stone": 20,
-      "bullet-bird": 28,
+      "bullet-arrow": 40,
+      "bullet-stone": 40,
+      "bullet-bird": 56,
     };
     const displaySize = displaySizeByTexture[textureKey] ?? 20;
 

@@ -2,7 +2,7 @@ export const GAME_WIDTH = 1760;
 export const GAME_HEIGHT = 760;
 
 export const BASE_HP = 10;
-export const LANE_Y = 460;
+export const LANE_Y = 500;
 export const BASE_X = 60;
 export const ENEMY_SPAWN_X = GAME_WIDTH - 30;
 export const MAX_ENERGY = 10;

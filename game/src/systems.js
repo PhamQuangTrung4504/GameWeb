@@ -209,7 +209,7 @@ export class CombatSystem {
 
     this.spawnBullet(
       pet.x + direction * 24,
-      pet.y - 2,
+      pet.y - 12,
       target,
       pet.damage,
       pet.bulletSpeed,
@@ -291,7 +291,7 @@ export class CombatSystem {
 
       this.spawnBullet(
         unit.x + 20,
-        unit.y - 4,
+        unit.y - 14,
         target,
         scaledDamage,
         unit.bulletSpeed,
@@ -425,7 +425,7 @@ export class CombatSystem {
     player.playAttackRanged?.();
     this.spawnBullet(
       player.x + 22,
-      player.y - 10,
+      player.y - 20,
       target,
       player.rangedDamage,
       COMBAT_CONFIG.playerBulletSpeed,
