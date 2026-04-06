@@ -34,7 +34,7 @@ export class HomeScene extends Phaser.Scene {
       .setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
 
     const centerY = GAME_HEIGHT / 2;
-    this.mainButtonWidth = Math.min(500, Math.max(360, GAME_WIDTH * 0.285));
+    this.mainButtonWidth = Math.min(375, Math.max(270, GAME_WIDTH * 0.214));
 
     const playHeight = this.getImageHeightByWidth(
       "btn-play",
@@ -48,7 +48,7 @@ export class HomeScene extends Phaser.Scene {
       "btn-guide",
       this.mainButtonWidth,
     );
-    const buttonGap = 22;
+    const buttonGap = 32;
     const totalHeight = playHeight + diffHeight + guideHeight + buttonGap * 2;
     const topY = centerY - totalHeight * 0.5;
     const playY = topY + playHeight * 0.5;
@@ -110,7 +110,7 @@ export class HomeScene extends Phaser.Scene {
 
     this.overlayFrame = this.add
       .image(GAME_WIDTH / 2, diffY + 12, "menu-frame")
-      .setDisplaySize(660, this.getImageHeightByWidth("menu-frame", 660))
+      .setDisplaySize(560, this.getImageHeightByWidth("menu-frame", 560) * 0.72)
       .setDepth(11)
       .setVisible(false);
 
@@ -134,14 +134,14 @@ export class HomeScene extends Phaser.Scene {
   createDifficultyOverlayItems() {
     const frameWidth = this.overlayFrame.displayWidth;
     const frameHeight = this.overlayFrame.displayHeight;
-    const leftX = this.overlayFrame.x - frameWidth * 0.205;
-    const rightX = this.overlayFrame.x + frameWidth * 0.205;
-    const headerY = this.overlayFrame.y - frameHeight * 0.24;
+    const leftX = this.overlayFrame.x - frameWidth * 0.18;
+    const rightX = this.overlayFrame.x + frameWidth * 0.18;
+    const headerY = this.overlayFrame.y - frameHeight * 0.28;
     const topY = this.overlayFrame.y + frameHeight * 0.02;
-    const bottomY = this.overlayFrame.y + frameHeight * 0.275;
-    const difficultyButtonWidth = frameWidth * 0.31;
+    const bottomY = this.overlayFrame.y + frameHeight * 0.26;
+    const difficultyButtonWidth = frameWidth * 0.28;
 
-    const headerWidth = frameWidth * 0.54;
+    const headerWidth = frameWidth * 0.5;
     this.diffHeaderBtn = this.add
       .image(this.overlayFrame.x, headerY, "btn-difficulty")
       .setDisplaySize(
@@ -211,8 +211,8 @@ export class HomeScene extends Phaser.Scene {
   createGuideOverlayItems() {
     const frameWidth = this.overlayFrame.displayWidth;
     const frameHeight = this.overlayFrame.displayHeight;
-    const headerY = this.overlayFrame.y - frameHeight * 0.24;
-    const headerWidth = frameWidth * 0.52;
+    const headerY = this.overlayFrame.y - frameHeight * 0.28;
+    const headerWidth = frameWidth * 0.48;
 
     this.guideHeaderBtn = this.add
       .image(this.overlayFrame.x, headerY, "btn-guide")
@@ -226,15 +226,15 @@ export class HomeScene extends Phaser.Scene {
     this.guideText = this.add
       .text(
         this.overlayFrame.x,
-        this.overlayFrame.y + 24,
+        this.overlayFrame.y + 10,
         this.getGuideText(),
         {
           fontFamily: "Verdana",
-          fontSize: "21px",
+          fontSize: "15px",
           color: "#e9f0ff",
           align: "left",
-          wordWrap: { width: frameWidth * 0.78 },
-          lineSpacing: 6,
+          wordWrap: { width: frameWidth * 0.76 },
+          lineSpacing: 2,
         },
       )
       .setOrigin(0.5)
@@ -244,11 +244,11 @@ export class HomeScene extends Phaser.Scene {
     this.guideCloseText = this.add
       .text(
         this.overlayFrame.x,
-        this.overlayFrame.y + frameHeight * 0.39,
+        this.overlayFrame.y + frameHeight * 0.43,
         "Bấm ra ngoài để đóng",
         {
           fontFamily: "Verdana",
-          fontSize: "18px",
+          fontSize: "14px",
           color: "#8de8a0",
           fontStyle: "bold",
         },

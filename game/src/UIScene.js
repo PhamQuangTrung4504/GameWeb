@@ -12,6 +12,15 @@ export class UIScene extends Phaser.Scene {
     super("UIScene");
   }
 
+  getImageHeightByWidth(textureKey, targetWidth) {
+    const texture = this.textures.get(textureKey);
+    const source = texture?.getSourceImage?.();
+    if (!source?.width || !source?.height) {
+      return targetWidth * 0.5;
+    }
+    return (targetWidth * source.height) / source.width;
+  }
+
   create() {
     this.theme = {
       panelDark: 0x212428,
@@ -69,27 +78,41 @@ export class UIScene extends Phaser.Scene {
 
   createSettingsMenu() {
     const btnX = GAME_WIDTH - 96;
-    const btnY = 34;
+    const btnY = 56;
     const panelX = GAME_WIDTH * 0.5;
-    const panelTopY = GAME_HEIGHT * 0.5 - 250;
+    const panelTopY = GAME_HEIGHT * 0.5 - 195;
 
-    this.settingsButtonBg = this.add
-      .rectangle(btnX, btnY, 168, 54, 0x2b2f34, 0.9)
-      .setOrigin(0.5)
-      .setStrokeStyle(3, 0x8a7858, 0.9)
-      .setDepth(220)
-      .setInteractive({ useHandCursor: true });
+    if (this.textures.exists("button-menu-game")) {
+      const menuButtonWidth = 170;
+      this.settingsButtonBg = this.add
+        .image(btnX, btnY, "button-menu-game")
+        .setDisplaySize(
+          menuButtonWidth,
+          this.getImageHeightByWidth("button-menu-game", menuButtonWidth),
+        )
+        .setDepth(220)
+        .setInteractive({ useHandCursor: true });
 
-    this.settingsButtonText = this.add
-      .text(btnX, btnY, "Setting", {
-        fontFamily: "Verdana",
-        fontSize: "20px",
-        color: "#f0e5c9",
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5)
-      .setDepth(221)
-      .setInteractive({ useHandCursor: true });
+      this.settingsButtonText = null;
+    } else {
+      this.settingsButtonBg = this.add
+        .rectangle(btnX, btnY, 168, 54, 0x2b2f34, 0.9)
+        .setOrigin(0.5)
+        .setStrokeStyle(3, 0x8a7858, 0.9)
+        .setDepth(220)
+        .setInteractive({ useHandCursor: true });
+
+      this.settingsButtonText = this.add
+        .text(btnX, btnY, "Setting", {
+          fontFamily: "Verdana",
+          fontSize: "20px",
+          color: "#f0e5c9",
+          fontStyle: "bold",
+        })
+        .setOrigin(0.5)
+        .setDepth(221)
+        .setInteractive({ useHandCursor: true });
+    }
 
     this.settingsMenuOpen = false;
     this.menuPausedGame = false;
@@ -107,17 +130,39 @@ export class UIScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .on("pointerdown", () => this.setSettingsMenuOpen(false));
 
-    this.settingsPanel = this.add
-      .rectangle(panelX, panelTopY, 460, 590, 0x252a2f, 0.93)
-      .setOrigin(0.5, 0)
-      .setStrokeStyle(3, 0x8a7858, 0.95)
-      .setDepth(219)
-      .setVisible(false);
+    if (this.textures.exists("frame-menu-game")) {
+      const frameWidth = 840;
+      this.settingsPanel = this.add
+        .image(panelX, panelTopY, "frame-menu-game")
+        .setOrigin(0.5, 0)
+        .setDisplaySize(
+          frameWidth,
+          this.getImageHeightByWidth("frame-menu-game", frameWidth),
+        )
+        .setDepth(219)
+        .setVisible(false);
+    } else {
+      this.settingsPanel = this.add
+        .rectangle(panelX, panelTopY, 460, 590, 0x252a2f, 0.93)
+        .setOrigin(0.5, 0)
+        .setStrokeStyle(3, 0x8a7858, 0.95)
+        .setDepth(219)
+        .setVisible(false);
+    }
+
+    const panelHeight = this.settingsPanel.displayHeight || 590;
+    const titleY = panelTopY + panelHeight * 0.08;
+    const speedSubtitleY = panelTopY + panelHeight * 0.27;
+    const sliderY = panelTopY + panelHeight * 0.47;
+    const valueY = sliderY + panelHeight * 0.1;
+    const fullscreenY = panelTopY + panelHeight * 0.6;
+    const restartY = panelTopY + panelHeight * 0.7;
+    const exitY = panelTopY + panelHeight * 0.8;
 
     this.settingsTitle = this.add
-      .text(panelX, panelTopY + 20, "MENU", {
+      .text(panelX, titleY, "CAI DAT", {
         fontFamily: "Verdana",
-        fontSize: "26px",
+        fontSize: "24px",
         color: "#f0e5c9",
         fontStyle: "bold",
       })
@@ -130,9 +175,9 @@ export class UIScene extends Phaser.Scene {
     this.difficultyMenuItems = [];
 
     this.speedSubtitle = this.add
-      .text(panelX, panelTopY + 252, "Tốc độ trò chơi", {
+      .text(panelX, speedSubtitleY, "Toc do tro choi", {
         fontFamily: "Verdana",
-        fontSize: "24px",
+        fontSize: "22px",
         color: "#d8ccb2",
         fontStyle: "bold",
       })
@@ -143,8 +188,8 @@ export class UIScene extends Phaser.Scene {
     this.speedMin = 1;
     this.speedMax = 3;
     this.speedStep = 0.05;
-    this.speedSliderTrackWidth = 280;
-    this.speedSliderY = panelTopY + 320;
+    this.speedSliderTrackWidth = 300;
+    this.speedSliderY = sliderY;
 
     this.speedSliderTrack = this.add
       .rectangle(
@@ -226,7 +271,7 @@ export class UIScene extends Phaser.Scene {
       .setVisible(false);
 
     this.speedValueText = this.add
-      .text(panelX, this.speedSliderY + 48, "1x", {
+      .text(panelX, valueY, "1x", {
         fontFamily: "Verdana",
         fontSize: "22px",
         color: "#8fe38d",
@@ -252,9 +297,9 @@ export class UIScene extends Phaser.Scene {
     this.input.on("pointerup", this.handleSpeedSliderPointerUp, this);
 
     this.fullscreenMenuItem = this.add
-      .text(panelX, panelTopY + 438, "Toàn màn", {
+      .text(panelX, fullscreenY, "Toan man", {
         fontFamily: "Verdana",
-        fontSize: "24px",
+        fontSize: "26px",
         color: "#f0e5c9",
         fontStyle: "bold",
       })
@@ -265,9 +310,9 @@ export class UIScene extends Phaser.Scene {
       .on("pointerdown", this.toggleFullscreenFromMenu, this);
 
     this.exitMenuItem = this.add
-      .text(panelX, panelTopY + 496, "Thoat", {
+      .text(panelX, exitY, "Thoat", {
         fontFamily: "Verdana",
-        fontSize: "26px",
+        fontSize: "30px",
         color: "#ff9f9f",
         fontStyle: "bold",
       })
@@ -277,6 +322,19 @@ export class UIScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .on("pointerdown", this.exitToHome, this);
 
+    this.restartMenuItem = this.add
+      .text(panelX, restartY, "Choi lai", {
+        fontFamily: "Verdana",
+        fontSize: "28px",
+        color: "#8fe38d",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(221)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", this.restartFromMenu, this);
+
     this.settingsButtonBg.on(
       "pointerdown",
       (pointer, localX, localY, event) => {
@@ -284,7 +342,7 @@ export class UIScene extends Phaser.Scene {
         this.toggleSettingsMenu();
       },
     );
-    this.settingsButtonText.on(
+    this.settingsButtonText?.on(
       "pointerdown",
       (pointer, localX, localY, event) => {
         event?.stopPropagation?.();
@@ -352,6 +410,7 @@ export class UIScene extends Phaser.Scene {
       inside(this.speedSliderKnob) ||
       inside(this.speedValueText) ||
       inside(this.fullscreenMenuItem) ||
+      inside(this.restartMenuItem) ||
       inside(this.exitMenuItem)
     ) {
       return true;
@@ -466,6 +525,7 @@ export class UIScene extends Phaser.Scene {
     setInputEnabled(this.speedSliderHitArea, visible);
     setInputEnabled(this.speedSliderKnob, visible);
     setInputEnabled(this.fullscreenMenuItem, visible);
+    setInputEnabled(this.restartMenuItem, visible);
     setInputEnabled(this.exitMenuItem, visible);
 
     const currentSpeed = this.registry.get("gameSpeed") ?? 1;
@@ -475,6 +535,7 @@ export class UIScene extends Phaser.Scene {
     this.fullscreenMenuItem.setText(
       this.isFullscreenActive() ? "Thu nhỏ màn" : "Toàn màn",
     );
+    this.restartMenuItem.setVisible(visible);
     this.exitMenuItem.setVisible(visible);
   }
 
@@ -545,6 +606,19 @@ export class UIScene extends Phaser.Scene {
     }
 
     this.scene.start("HomeScene");
+  }
+
+  restartFromMenu() {
+    this.settingsMenuOpen = false;
+    this.menuPausedGame = false;
+    this.refreshSettingsMenuState();
+
+    const gameScene = this.scene.get("GameScene");
+    if (!gameScene) {
+      return;
+    }
+
+    gameScene.requestRestartGame?.();
   }
 
   createTopLeftHud(topPadding) {

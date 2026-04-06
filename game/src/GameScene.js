@@ -217,6 +217,8 @@ export class GameScene extends Phaser.Scene {
     this.load.image("card-soldier1", "assets/card/soldier1_card.png");
     this.load.image("card-soldier2", "assets/card/soldier2_card.png");
     this.load.image("icon-upgrade-unit", "assets/object/upgrade_unit.png");
+    this.load.image("button-menu-game", "assets/object/button_menu_game.png");
+    this.load.image("frame-menu-game", "assets/object/frame_menu_game.png");
     this.load.image(
       "skill-icon-tornado",
       "assets/object/icon_skill_loc_xoay.png",
@@ -226,6 +228,27 @@ export class GameScene extends Phaser.Scene {
       "assets/object/icon_skill_thien_thach.png",
     );
     this.load.image("skill-meteor-impact", "assets/object/hoat_anh_no.png");
+
+    this.load.spritesheet(
+      "witch-tower-idle-sheet",
+      "assets/tower_defen/witch_tower_dung_im.png",
+      {
+        frameWidth: 64,
+        frameHeight: 64,
+      },
+    );
+    this.load.spritesheet(
+      "witch-tower-attack-sheet",
+      "assets/tower_defen/witch_tower_attack.png",
+      {
+        frameWidth: 64,
+        frameHeight: 64,
+      },
+    );
+    this.load.image(
+      "witch-fire-bullet",
+      "assets/tower_defen/fire_cua_witch_attack.png",
+    );
   }
 
   create() {
@@ -257,6 +280,7 @@ export class GameScene extends Phaser.Scene {
     this.bullets = [];
 
     this.drawBackground();
+    this.createWitchTower();
 
     this.spawnUnit(UNIT_STATS.default.x, UNIT_TYPES.RANGED);
     this.player = new Player(this, PLAYER_STATS.x, this.laneY, PLAYER_STATS);
@@ -334,7 +358,165 @@ export class GameScene extends Phaser.Scene {
     this.updatePlayerMovement(scaledDeltaMs / 1000);
 
     this.updateEnemies(scaledDeltaMs / 1000);
+    this.updateWitchTower(gameTime, scaledDeltaMs / 1000);
     this.combatSystem.update(gameTime, scaledDeltaMs);
+  }
+
+  createWitchTower() {
+    if (!this.textures.exists("witch-tower-idle-sheet")) {
+      this.witchTower = null;
+      this.witchFireBullets = [];
+      return;
+    }
+
+    const towerX = this.baseX + 470;
+    const towerY = this.laneY + 2;
+    const sprite = this.add
+      .sprite(towerX, towerY, "witch-tower-idle-sheet")
+      .setDisplaySize(230, 230)
+      .setOrigin(0.5, 1)
+      .setDepth(14);
+
+    if (this.anims.exists("witch-tower-idle")) {
+      sprite.play("witch-tower-idle", true);
+    }
+
+    this.witchTower = {
+      sprite,
+      range: 760,
+      damage: 20,
+      bulletSpeed: 520,
+      fireCooldownMs: 1000,
+      nextFireAt: 0,
+      attackAnimMs: 300,
+    };
+
+    this.witchFireBullets = [];
+  }
+
+  updateWitchTower(gameTime, deltaSeconds) {
+    if (!this.witchTower?.sprite?.active) {
+      return;
+    }
+
+    const tower = this.witchTower;
+    const sprite = tower.sprite;
+    if (sprite.anims) {
+      // Tăng nhẹ tốc độ hoạt ảnh và bám theo tốc độ game để cảm giác đồng bộ hơn
+      sprite.anims.timeScale = 1.15 * this.getVisualSpeedMultiplier();
+    }
+
+    for (let i = this.witchFireBullets.length - 1; i >= 0; i -= 1) {
+      const bullet = this.witchFireBullets[i];
+      if (!bullet?.active) {
+        this.witchFireBullets.splice(i, 1);
+        continue;
+      }
+
+      bullet.x += bullet.vx * deltaSeconds;
+      bullet.y += bullet.vy * deltaSeconds;
+      bullet.rotation += deltaSeconds * 8;
+
+      let hitEnemy = null;
+      for (const enemy of this.enemies) {
+        if (!enemy?.active || !enemy.isAlive) {
+          continue;
+        }
+
+        if (
+          Phaser.Math.Distance.Between(bullet.x, bullet.y, enemy.x, enemy.y) >
+          34
+        ) {
+          continue;
+        }
+
+        hitEnemy = enemy;
+        break;
+      }
+
+      if (hitEnemy) {
+        this.combatSystem.applyDamage(hitEnemy, bullet.damage);
+        this.playHitEffect(hitEnemy.visual ?? hitEnemy);
+        bullet.destroy();
+        this.witchFireBullets.splice(i, 1);
+        continue;
+      }
+
+      if (
+        bullet.x < -30 ||
+        bullet.x > GAME_WIDTH + 30 ||
+        bullet.y < -30 ||
+        bullet.y > GAME_HEIGHT + 30
+      ) {
+        bullet.destroy();
+        this.witchFireBullets.splice(i, 1);
+      }
+    }
+
+    let target = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (const enemy of this.enemies) {
+      if (!enemy?.active || !enemy.isAlive) {
+        continue;
+      }
+
+      const distance = Phaser.Math.Distance.Between(
+        sprite.x,
+        sprite.y - 60,
+        enemy.x,
+        enemy.y,
+      );
+      if (distance > tower.range) {
+        continue;
+      }
+
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        target = enemy;
+      }
+    }
+
+    if (!target) {
+      if (sprite.anims?.currentAnim?.key !== "witch-tower-idle") {
+        sprite.play("witch-tower-idle", true);
+      }
+      return;
+    }
+
+    if (gameTime < tower.nextFireAt) {
+      return;
+    }
+
+    tower.nextFireAt = gameTime + tower.fireCooldownMs;
+
+    if (this.anims.exists("witch-tower-attack")) {
+      sprite.play("witch-tower-attack", true);
+      this.time.delayedCall(tower.attackAnimMs, () => {
+        if (sprite?.active) {
+          sprite.play("witch-tower-idle", true);
+        }
+      });
+    }
+
+    const fireStartX = sprite.x + sprite.displayWidth * 0.3;
+    const fireStartY = sprite.y - sprite.displayHeight * 0.58;
+    const targetX = target.x;
+    const targetY = target.y - 26;
+    const angle = Phaser.Math.Angle.Between(
+      fireStartX,
+      fireStartY,
+      targetX,
+      targetY,
+    );
+
+    const bullet = this.add
+      .image(fireStartX, fireStartY, "witch-fire-bullet")
+      .setDisplaySize(90, 90)
+      .setDepth(15);
+    bullet.vx = Math.cos(angle) * tower.bulletSpeed;
+    bullet.vy = Math.sin(angle) * tower.bulletSpeed;
+    bullet.damage = tower.damage;
+    this.witchFireBullets.push(bullet);
   }
 
   syncUiRegistry() {
@@ -1018,6 +1200,16 @@ export class GameScene extends Phaser.Scene {
       this.bullets.splice(i, 1);
     }
 
+    for (let i = this.witchFireBullets.length - 1; i >= 0; i -= 1) {
+      this.witchFireBullets[i].destroy();
+      this.witchFireBullets.splice(i, 1);
+    }
+
+    if (this.witchTower?.sprite?.active) {
+      this.witchTower.sprite.destroy();
+      this.witchTower = null;
+    }
+
     this.registry.set("gameOver", true);
 
     if (this.petBird?.active) {
@@ -1037,12 +1229,31 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(centerX, 255, "Refresh page to restart", {
+      .text(centerX, 255, "Chon Choi lai trong Cai dat", {
         fontFamily: "Trebuchet MS",
         fontSize: "20px",
         color: "#4a2b2b",
       })
       .setOrigin(0.5);
+
+    this.add
+      .text(centerX, 288, "Nhan vao man hinh de choi lai", {
+        fontFamily: "Trebuchet MS",
+        fontSize: "22px",
+        color: "#2c1a1a",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5);
+
+    this.input.once("pointerdown", () => this.requestRestartGame());
+  }
+
+  requestRestartGame() {
+    if (this.scene.isActive("UIScene") || this.scene.isPaused("UIScene")) {
+      this.scene.stop("UIScene");
+    }
+
+    this.scene.restart({ difficulty: this.difficultyKey });
   }
 
   pushUiMessage(text, x, y, color = UI_CONFIG.normalColor) {
@@ -1500,6 +1711,28 @@ export class GameScene extends Phaser.Scene {
           end: 3,
         }),
         frameRate: 12,
+        repeat: 0,
+      });
+    }
+
+    if (this.textures.exists("witch-tower-idle-sheet")) {
+      ensureAnim("witch-tower-idle", {
+        frames: this.anims.generateFrameNumbers("witch-tower-idle-sheet", {
+          start: 0,
+          end: 1,
+        }),
+        frameRate: 6,
+        repeat: -1,
+      });
+    }
+
+    if (this.textures.exists("witch-tower-attack-sheet")) {
+      ensureAnim("witch-tower-attack", {
+        frames: this.anims.generateFrameNumbers("witch-tower-attack-sheet", {
+          start: 0,
+          end: 4,
+        }),
+        frameRate: 13,
         repeat: 0,
       });
     }
