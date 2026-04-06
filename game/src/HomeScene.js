@@ -36,9 +36,18 @@ export class HomeScene extends Phaser.Scene {
     const centerY = GAME_HEIGHT / 2;
     this.mainButtonWidth = Math.min(500, Math.max(360, GAME_WIDTH * 0.285));
 
-    const playHeight = this.getImageHeightByWidth("btn-play", this.mainButtonWidth);
-    const diffHeight = this.getImageHeightByWidth("btn-difficulty", this.mainButtonWidth);
-    const guideHeight = this.getImageHeightByWidth("btn-guide", this.mainButtonWidth);
+    const playHeight = this.getImageHeightByWidth(
+      "btn-play",
+      this.mainButtonWidth,
+    );
+    const diffHeight = this.getImageHeightByWidth(
+      "btn-difficulty",
+      this.mainButtonWidth,
+    );
+    const guideHeight = this.getImageHeightByWidth(
+      "btn-guide",
+      this.mainButtonWidth,
+    );
     const buttonGap = 22;
     const totalHeight = playHeight + diffHeight + guideHeight + buttonGap * 2;
     const topY = centerY - totalHeight * 0.5;
