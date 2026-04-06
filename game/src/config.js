@@ -176,7 +176,7 @@ export const UI_CONFIG = {
   skillColor: "#2b3f76",
 };
 
-export function buildGameConfig(GameScene, UIScene) {
+export function buildGameConfig(HomeScene, GameScene, UIScene) {
   return {
     type: Phaser.AUTO,
     parent: "game-root",
@@ -187,7 +187,7 @@ export function buildGameConfig(GameScene, UIScene) {
       autoCenter: Phaser.Scale.CENTER_BOTH,
       fullscreenTarget: "game-root",
     },
-    backgroundColor: "#d8c69d",
+    backgroundColor: "#000000",
     pixelArt: true,
     render: {
       pixelArt: true,
@@ -197,6 +197,6 @@ export function buildGameConfig(GameScene, UIScene) {
     physics: {
       default: "arcade",
     },
-    scene: [GameScene, UIScene],
+    scene: [HomeScene, GameScene, UIScene],
   };
 }

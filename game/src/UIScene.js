@@ -71,7 +71,7 @@ export class UIScene extends Phaser.Scene {
     const btnX = GAME_WIDTH - 96;
     const btnY = 34;
     const panelX = GAME_WIDTH * 0.5;
-    const panelTopY = GAME_HEIGHT * 0.5 - 210;
+    const panelTopY = GAME_HEIGHT * 0.5 - 250;
 
     this.settingsButtonBg = this.add
       .rectangle(btnX, btnY, 168, 54, 0x2b2f34, 0.9)
@@ -108,7 +108,7 @@ export class UIScene extends Phaser.Scene {
       .on("pointerdown", () => this.setSettingsMenuOpen(false));
 
     this.settingsPanel = this.add
-      .rectangle(panelX, panelTopY, 460, 520, 0x252a2f, 0.93)
+      .rectangle(panelX, panelTopY, 460, 590, 0x252a2f, 0.93)
       .setOrigin(0.5, 0)
       .setStrokeStyle(3, 0x8a7858, 0.95)
       .setDepth(219)
@@ -125,46 +125,12 @@ export class UIScene extends Phaser.Scene {
       .setDepth(221)
       .setVisible(false);
 
-    this.settingsSubtitle = this.add
-      .text(panelX, panelTopY + 64, "Độ khó", {
-        fontFamily: "Verdana",
-        fontSize: "24px",
-        color: "#d8ccb2",
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5, 0)
-      .setDepth(221)
-      .setVisible(false);
-
-    const options = this.registry.get("difficultyOptions") ?? [
-      { key: "easy", label: "Dễ" },
-      { key: "medium", label: "Trung bình" },
-      { key: "hard", label: "Khó" },
-      { key: "extreme", label: "Siêu cấp khó" },
-    ];
-
+    // Đã bỏ chọn độ khó khỏi menu setting, chỉ giữ lại các phần còn lại
+    this.settingsSubtitle = null;
     this.difficultyMenuItems = [];
-    for (let i = 0; i < options.length; i += 1) {
-      const option = options[i];
-      const y = panelTopY + 108 + i * 48;
-      const item = this.add
-        .text(panelX, y, option.label, {
-          fontFamily: "Verdana",
-          fontSize: "24px",
-          color: "#d8ccb2",
-          fontStyle: "bold",
-        })
-        .setOrigin(0.5, 0)
-        .setDepth(221)
-        .setVisible(false)
-        .setInteractive({ useHandCursor: true })
-        .on("pointerdown", () => this.selectDifficulty(option.key));
-      item._difficultyKey = option.key;
-      this.difficultyMenuItems.push(item);
-    }
 
     this.speedSubtitle = this.add
-      .text(panelX, panelTopY + 304, "Tốc độ trò chơi", {
+      .text(panelX, panelTopY + 252, "Tốc độ trò chơi", {
         fontFamily: "Verdana",
         fontSize: "24px",
         color: "#d8ccb2",
@@ -178,7 +144,7 @@ export class UIScene extends Phaser.Scene {
     this.speedMax = 3;
     this.speedStep = 0.05;
     this.speedSliderTrackWidth = 280;
-    this.speedSliderY = panelTopY + 372;
+    this.speedSliderY = panelTopY + 320;
 
     this.speedSliderTrack = this.add
       .rectangle(
@@ -286,7 +252,7 @@ export class UIScene extends Phaser.Scene {
     this.input.on("pointerup", this.handleSpeedSliderPointerUp, this);
 
     this.fullscreenMenuItem = this.add
-      .text(panelX, panelTopY + 484, "Toàn màn", {
+      .text(panelX, panelTopY + 438, "Toàn màn", {
         fontFamily: "Verdana",
         fontSize: "24px",
         color: "#f0e5c9",
@@ -297,6 +263,19 @@ export class UIScene extends Phaser.Scene {
       .setVisible(false)
       .setInteractive({ useHandCursor: true })
       .on("pointerdown", this.toggleFullscreenFromMenu, this);
+
+    this.exitMenuItem = this.add
+      .text(panelX, panelTopY + 496, "Thoat", {
+        fontFamily: "Verdana",
+        fontSize: "26px",
+        color: "#ff9f9f",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(221)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", this.exitToHome, this);
 
     this.settingsButtonBg.on(
       "pointerdown",
@@ -372,7 +351,8 @@ export class UIScene extends Phaser.Scene {
       inside(this.speedSliderHitArea) ||
       inside(this.speedSliderKnob) ||
       inside(this.speedValueText) ||
-      inside(this.fullscreenMenuItem)
+      inside(this.fullscreenMenuItem) ||
+      inside(this.exitMenuItem)
     ) {
       return true;
     }
@@ -474,7 +454,6 @@ export class UIScene extends Phaser.Scene {
     this.settingsBackdrop.setVisible(visible);
     this.settingsPanel.setVisible(visible);
     this.settingsTitle.setVisible(visible);
-    this.settingsSubtitle.setVisible(visible);
     this.speedSubtitle.setVisible(visible);
     this.speedSliderTrack.setVisible(visible);
     this.speedSliderFill.setVisible(visible);
@@ -487,15 +466,7 @@ export class UIScene extends Phaser.Scene {
     setInputEnabled(this.speedSliderHitArea, visible);
     setInputEnabled(this.speedSliderKnob, visible);
     setInputEnabled(this.fullscreenMenuItem, visible);
-
-    const currentDifficulty = this.registry.get("difficulty") ?? "medium";
-    for (const item of this.difficultyMenuItems) {
-      item.setVisible(visible);
-      setInputEnabled(item, visible);
-      item.setColor(
-        item._difficultyKey === currentDifficulty ? "#8fe38d" : "#d8ccb2",
-      );
-    }
+    setInputEnabled(this.exitMenuItem, visible);
 
     const currentSpeed = this.registry.get("gameSpeed") ?? 1;
     this.updateSpeedSliderUi(currentSpeed);
@@ -504,6 +475,7 @@ export class UIScene extends Phaser.Scene {
     this.fullscreenMenuItem.setText(
       this.isFullscreenActive() ? "Thu nhỏ màn" : "Toàn màn",
     );
+    this.exitMenuItem.setVisible(visible);
   }
 
   selectDifficulty(levelKey) {
@@ -561,6 +533,18 @@ export class UIScene extends Phaser.Scene {
     }
 
     this.time.delayedCall(60, () => this.refreshSettingsMenuState());
+  }
+
+  exitToHome() {
+    this.settingsMenuOpen = false;
+    this.menuPausedGame = false;
+    this.refreshSettingsMenuState();
+
+    if (this.scene.isActive("GameScene") || this.scene.isPaused("GameScene")) {
+      this.scene.stop("GameScene");
+    }
+
+    this.scene.start("HomeScene");
   }
 
   createTopLeftHud(topPadding) {

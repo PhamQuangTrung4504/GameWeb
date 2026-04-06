@@ -53,12 +53,12 @@ export class GameScene extends Phaser.Scene {
         enemySpeedScale: 1.1,
         enemyDamageScale: 1.2,
       },
-      extreme: {
-        label: "Siêu cấp khó",
-        spawnIntervalScale: 0.74,
-        enemyHpScale: 1.45,
-        enemySpeedScale: 1.2,
-        enemyDamageScale: 1.45,
+      hell: {
+        label: "Địa ngục",
+        spawnIntervalScale: 0.7,
+        enemyHpScale: 1.7,
+        enemySpeedScale: 1.3,
+        enemyDamageScale: 1.7,
       },
     };
   }
@@ -239,7 +239,9 @@ export class GameScene extends Phaser.Scene {
     this.isGameOver = false;
     this.rangedLevel = 1;
     this.meleeLevel = 1;
-    this.difficultyKey = "medium";
+    // Lấy độ khó từ HomeScene nếu có
+    const data = this.scene.settings.data || {};
+    this.difficultyKey = data.difficulty || "medium";
     this.gameSpeedMultiplier = 1;
     this.gameClockMs = 0;
     this.unitCardCooldownMs = UNIT_CARD_COOLDOWN_MS;
@@ -446,7 +448,7 @@ export class GameScene extends Phaser.Scene {
       { key: "easy", label: this.difficultyPresets.easy.label },
       { key: "medium", label: this.difficultyPresets.medium.label },
       { key: "hard", label: this.difficultyPresets.hard.label },
-      { key: "extreme", label: this.difficultyPresets.extreme.label },
+      { key: "hell", label: this.difficultyPresets.hell.label },
     ];
   }
 

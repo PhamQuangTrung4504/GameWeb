@@ -17,26 +17,21 @@
       body {
         margin: 0;
         min-height: 100dvh;
-        display: grid;
-        place-items: center;
-        background: radial-gradient(
-          circle at 20% 20%,
-          #f8f4e7 0%,
-          #ece3cd 50%,
-          #d9ccb1 100%
-        );
+        width: 100vw;
+        background: #000;
         font-family: "Trebuchet MS", "Segoe UI", sans-serif;
         overflow: hidden;
       }
 
       #game-root {
-        border: 3px solid #4a3f35;
-        border-radius: 8px;
-        box-shadow: 0 16px 30px rgba(41, 33, 22, 0.25);
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
         overflow: hidden;
-        width: min(97vw, 1760px);
-        aspect-ratio: 1760 / 760;
-        max-height: 94dvh;
+        width: 100vw;
+        height: 100dvh;
+        max-height: 100dvh;
+        max-width: 100vw;
       }
 
       #game-root:fullscreen,
@@ -59,14 +54,14 @@
 
       @media (min-width: 1440px) {
         #game-root {
-          width: min(97vw, 1780px);
+          width: 100vw;
         }
       }
 
       @media (max-width: 1024px) {
         #game-root {
           width: 100vw;
-          max-height: 100dvh;
+          height: 100dvh;
           border-width: 0;
           border-radius: 0;
           box-shadow: none;
