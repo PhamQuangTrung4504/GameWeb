@@ -10,6 +10,7 @@ export class HomeScene extends Phaser.Scene {
     this.overlayMode = null;
     this.difficultyButtonMap = {};
     this.logoTipOpen = false;
+    this.isStartingGame = false;
   }
 
   preload() {
@@ -85,7 +86,20 @@ export class HomeScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     this.registerMainMenuButtonHover(playBtn);
     playBtn.on("pointerdown", () => {
-      this.scene.start("GameScene", { difficulty: this.selectedDifficulty });
+      if (this.isStartingGame) {
+        return;
+      }
+
+      this.isStartingGame = true;
+      playBtn.disableInteractive();
+
+      if (typeof window !== "undefined" && window.showGameLoading) {
+        window.showGameLoading();
+      }
+
+      this.time.delayedCall(140, () => {
+        this.scene.start("GameScene", { difficulty: this.selectedDifficulty });
+      });
     });
 
     const diffBtn = this.add
@@ -192,6 +206,10 @@ export class HomeScene extends Phaser.Scene {
     });
 
     this.updateDifficultyVisuals();
+
+    if (typeof window !== "undefined" && window.hideGameLoading) {
+      window.hideGameLoading();
+    }
   }
 
   getImageHeightByWidth(textureKey, targetWidth) {

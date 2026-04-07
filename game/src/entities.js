@@ -35,7 +35,7 @@ export class Enemy extends Phaser.GameObjects.Rectangle {
       normal: { width: 94, height: 115 },
       fast: { width: 94, height: 115 },
       tank: { width: 94, height: 115 },
-      boss: { width: 174, height: 174 },
+      boss: { width: 132, height: 155 },
     };
     const displaySize =
       displaySizeByType[enemyType] ?? displaySizeByType.normal;

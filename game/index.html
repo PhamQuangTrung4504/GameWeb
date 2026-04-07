@@ -26,6 +26,72 @@
         overflow: hidden;
       }
 
+      #loading-screen {
+        position: fixed;
+        inset: 0;
+        z-index: 3000;
+        display: grid;
+        place-items: center;
+        background:
+          linear-gradient(
+            180deg,
+            rgba(8, 12, 22, 0.8) 0%,
+            rgba(10, 16, 27, 0.66) 52%,
+            rgba(7, 10, 18, 0.84) 100%
+          ),
+          url("assets/dashboard/background.jpg") center center / cover no-repeat;
+        opacity: 1;
+        visibility: visible;
+        transition: opacity 0.42s ease, visibility 0.42s ease;
+      }
+
+      #loading-screen.is-hidden {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .loading-panel {
+        width: min(78vw, 620px);
+        transform: translateY(-5vh);
+        display: grid;
+        justify-items: center;
+        row-gap: clamp(20px, 3.8vh, 36px);
+      }
+
+      .loading-logo {
+        width: clamp(220px, 42vw, 560px);
+        height: auto;
+        image-rendering: pixelated;
+        filter: drop-shadow(0 9px 20px rgba(0, 0, 0, 0.38));
+      }
+
+      .loading-spinner {
+        width: clamp(78px, 11vw, 128px);
+        height: auto;
+        image-rendering: pixelated;
+        animation: loading-spin 3.6s linear infinite;
+        transform-origin: 50% 50%;
+        will-change: transform;
+        filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.4));
+      }
+
+      .loading-text {
+        width: clamp(132px, 21vw, 260px);
+        height: auto;
+        image-rendering: pixelated;
+        filter: drop-shadow(0 5px 14px rgba(0, 0, 0, 0.42));
+      }
+
+      @keyframes loading-spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
       #game-root {
         border: 0;
         border-radius: 0;
@@ -82,7 +148,77 @@
     </style>
   </head>
   <body>
+    <div id="loading-screen" aria-live="polite" aria-label="Loading game">
+      <div class="loading-panel">
+        <img
+          class="loading-logo"
+          src="./assets/logo/logogame1.png"
+          alt="Army Vs Zombies"
+        />
+        <img
+          class="loading-spinner"
+          src="./assets/object/loading.png"
+          alt="Loading"
+        />
+        <img
+          class="loading-text"
+          src="./assets/object/text_loading.png"
+          alt="Loading Text"
+        />
+      </div>
+    </div>
+
     <div id="game-root"></div>
+
+    <script>
+      (() => {
+        const loadingScreen = document.getElementById("loading-screen");
+        const minVisibleMs = 480;
+        let visibleSince = performance.now();
+        let hideTimerId = null;
+
+        window.showGameLoading = () => {
+          if (!loadingScreen) {
+            return;
+          }
+
+          if (hideTimerId) {
+            window.clearTimeout(hideTimerId);
+            hideTimerId = null;
+          }
+
+          loadingScreen.classList.remove("is-hidden");
+          visibleSince = performance.now();
+        };
+
+        window.hideGameLoading = (force = false) => {
+          if (!loadingScreen) {
+            return;
+          }
+
+          if (hideTimerId) {
+            window.clearTimeout(hideTimerId);
+            hideTimerId = null;
+          }
+
+          const elapsed = performance.now() - visibleSince;
+          const delay = force ? 0 : Math.max(0, minVisibleMs - elapsed);
+
+          hideTimerId = window.setTimeout(() => {
+            loadingScreen.classList.add("is-hidden");
+            hideTimerId = null;
+          }, delay);
+        };
+
+        window.showGameLoading();
+
+        window.setTimeout(() => {
+          if (typeof window.hideGameLoading === "function") {
+            window.hideGameLoading(true);
+          }
+        }, 18000);
+      })();
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
     <script type="module" src="./main.js"></script>

@@ -178,16 +178,16 @@ export class GameScene extends Phaser.Scene {
       "enemy-zombieboss1",
       "assets/enemy/zombieboss1_di_chuyen.png",
       {
-        frameWidth: 110,
-        frameHeight: 110,
+        frameWidth: 205,
+        frameHeight: 241,
       },
     );
     this.load.spritesheet(
       "enemy-zombieboss1-attack-sheet",
       "assets/enemy/zombieboss1_attack.png",
       {
-        frameWidth: 110,
-        frameHeight: 110,
+        frameWidth: 199,
+        frameHeight: 241,
       },
     );
 
@@ -336,6 +336,10 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard.on("keydown-E", this.handleMeteorHotkeyFeedback, this);
 
     this.scene.launch("UIScene");
+
+    if (typeof window !== "undefined" && window.hideGameLoading) {
+      window.hideGameLoading();
+    }
   }
 
   update(time, deltaMs) {
@@ -1697,7 +1701,7 @@ export class GameScene extends Phaser.Scene {
     ensureAnim("enemy-zombieboss1-move", {
       frames: this.anims.generateFrameNumbers("enemy-zombieboss1", {
         start: 0,
-        end: 1,
+        end: 3,
       }),
       frameRate: 4,
       repeat: -1,
@@ -1707,7 +1711,7 @@ export class GameScene extends Phaser.Scene {
         "enemy-zombieboss1-attack-sheet",
         {
           start: 0,
-          end: 1,
+          end: 3,
         },
       ),
       frameRate: 6,
