@@ -24,7 +24,8 @@
         const isMobileBrowser = mobileUA.test(navigator.userAgent || "");
 
         const updateViewportVars = () => {
-          const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+          const viewportWidth =
+            window.visualViewport?.width ?? window.innerWidth;
           const viewportHeight =
             window.visualViewport?.height ?? window.innerHeight;
 
@@ -52,7 +53,8 @@
             return;
           }
 
-          const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+          const viewportWidth =
+            window.visualViewport?.width ?? window.innerWidth;
           const viewportHeight =
             window.visualViewport?.height ?? window.innerHeight;
           const isPortrait = viewportHeight > viewportWidth;
