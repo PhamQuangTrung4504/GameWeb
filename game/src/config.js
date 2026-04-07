@@ -187,7 +187,7 @@ export function buildGameConfig(HomeScene, GameScene, UIScene) {
       autoCenter: Phaser.Scale.CENTER_BOTH,
       fullscreenTarget: "game-root",
     },
-    backgroundColor: "#000000",
+    backgroundColor: "#6fafe6",
     pixelArt: true,
     render: {
       pixelArt: true,

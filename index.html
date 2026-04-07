@@ -3,6 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link
+      rel="preload"
+      as="image"
+      href="./game/assets/logo/logogame1.png"
+      fetchpriority="high"
+    />
+    <link
+      rel="preload"
+      as="image"
+      href="./game/assets/object/loading.png"
+      fetchpriority="high"
+    />
+    <link
+      rel="preload"
+      as="image"
+      href="./game/assets/object/text_loading.png"
+      fetchpriority="high"
+    />
+    <link
+      rel="preload"
+      as="image"
+      href="./game/assets/dashboard/background.jpg"
+      fetchpriority="high"
+    />
     <link
       rel="icon"
       type="image/png"
@@ -20,6 +45,7 @@
         display: grid;
         place-items: center;
         overflow: hidden;
+        background-color: #5f93c3;
         background:
           linear-gradient(
             180deg,
@@ -72,7 +98,7 @@
       // Keep query/hash when forwarding to the game entry page.
       const target = "./game/" + window.location.search + window.location.hash;
       window.addEventListener("DOMContentLoaded", () => {
-        window.setTimeout(() => window.location.replace(target), 80);
+        window.location.replace(target);
       });
     </script>
   </head>
@@ -81,16 +107,19 @@
       <img
         class="loading-logo"
         src="./game/assets/logo/logogame1.png"
+        fetchpriority="high"
         alt="Army Vs Zombies"
       />
       <img
         class="loading-spinner"
         src="./game/assets/object/loading.png"
+        fetchpriority="high"
         alt="Loading"
       />
       <img
         class="loading-text"
         src="./game/assets/object/text_loading.png"
+        fetchpriority="high"
         alt="Loading Text"
       />
       <noscript>

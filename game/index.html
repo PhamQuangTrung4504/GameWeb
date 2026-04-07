@@ -3,6 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link
+      rel="preload"
+      as="image"
+      href="./assets/logo/logogame1.png"
+      fetchpriority="high"
+    />
+    <link
+      rel="preload"
+      as="image"
+      href="./assets/object/loading.png"
+      fetchpriority="high"
+    />
+    <link
+      rel="preload"
+      as="image"
+      href="./assets/object/text_loading.png"
+      fetchpriority="high"
+    />
+    <link
+      rel="preload"
+      as="image"
+      href="./assets/dashboard/background.jpg"
+      fetchpriority="high"
+    />
     <link rel="icon" type="image/png" href="./assets/logo/logo_favicon1.png" />
     <link rel="apple-touch-icon" href="./assets/logo/logo_favicon1.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -20,6 +45,7 @@
         margin: 0;
         min-height: 100dvh;
         width: 100vw;
+        background-color: #6fafe6;
         background: url("assets/dashboard/background.jpg") center center / cover
           no-repeat;
         font-family: "Trebuchet MS", "Segoe UI", sans-serif;
@@ -32,6 +58,7 @@
         z-index: 3000;
         display: grid;
         place-items: center;
+        background-color: #5d8fbc;
         background:
           linear-gradient(
             180deg,
@@ -103,6 +130,7 @@
         height: 100dvh;
         max-height: 100dvh;
         max-width: 100vw;
+        background-color: #6fafe6;
         background: url("assets/dashboard/background.jpg") center center / cover
           no-repeat;
       }
@@ -155,16 +183,19 @@
         <img
           class="loading-logo"
           src="./assets/logo/logogame1.png"
+          fetchpriority="high"
           alt="Army Vs Zombies"
         />
         <img
           class="loading-spinner"
           src="./assets/object/loading.png"
+          fetchpriority="high"
           alt="Loading"
         />
         <img
           class="loading-text"
           src="./assets/object/text_loading.png"
+          fetchpriority="high"
           alt="Loading Text"
         />
       </div>
@@ -213,12 +244,6 @@
         };
 
         window.showGameLoading();
-
-        window.setTimeout(() => {
-          if (typeof window.hideGameLoading === "function") {
-            window.hideGameLoading(true);
-          }
-        }, 18000);
       })();
     </script>
 
