@@ -61,6 +61,7 @@ export class HomeScene extends Phaser.Scene {
       .setDisplaySize(this.mainButtonWidth, playHeight)
       .setDepth(5)
       .setInteractive({ useHandCursor: true });
+    this.registerMainMenuButtonHover(playBtn);
     playBtn.on("pointerdown", () => {
       this.scene.start("GameScene", { difficulty: this.selectedDifficulty });
     });
@@ -70,6 +71,7 @@ export class HomeScene extends Phaser.Scene {
       .setDisplaySize(this.mainButtonWidth, diffHeight)
       .setDepth(5)
       .setInteractive({ useHandCursor: true });
+    this.registerMainMenuButtonHover(diffBtn);
     diffBtn.on("pointerdown", () => {
       this.showDifficultyMenu();
     });
@@ -79,6 +81,7 @@ export class HomeScene extends Phaser.Scene {
       .setDisplaySize(this.mainButtonWidth, guideHeight)
       .setDepth(5)
       .setInteractive({ useHandCursor: true });
+    this.registerMainMenuButtonHover(guideBtn);
     guideBtn.on("pointerdown", () => {
       this.showGuidePanel();
     });
@@ -167,6 +170,17 @@ export class HomeScene extends Phaser.Scene {
       return targetWidth * 0.5;
     }
     return (targetWidth * frame.height) / frame.width;
+  }
+
+  registerMainMenuButtonHover(button) {
+    const baseScaleX = button.scaleX;
+    const baseScaleY = button.scaleY;
+
+    button
+      .on("pointerover", () =>
+        button.setScale(baseScaleX * 1.05, baseScaleY * 1.05),
+      )
+      .on("pointerout", () => button.setScale(baseScaleX, baseScaleY));
   }
 
   createDifficultyOverlayItems() {

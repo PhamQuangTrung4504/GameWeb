@@ -80,7 +80,6 @@ export class UIScene extends Phaser.Scene {
     const btnX = GAME_WIDTH - 140;
     const btnY = 58;
     const panelX = GAME_WIDTH * 0.5;
-    const panelTopY = GAME_HEIGHT * 0.5 - 168;
 
     if (this.textures.exists("button-menu-game")) {
       const menuButtonWidth = 258;
@@ -114,6 +113,29 @@ export class UIScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true });
     }
 
+    const menuButtonBaseScaleX = this.settingsButtonBg?.scaleX ?? 1;
+    const menuButtonBaseScaleY = this.settingsButtonBg?.scaleY ?? 1;
+    const menuButtonTextBaseScaleX = this.settingsButtonText?.scaleX ?? 1;
+    const menuButtonTextBaseScaleY = this.settingsButtonText?.scaleY ?? 1;
+    const applySettingsMenuButtonHover = (hovered) => {
+      const scale = hovered ? 1.04 : 1;
+      this.settingsButtonBg?.setScale(
+        menuButtonBaseScaleX * scale,
+        menuButtonBaseScaleY * scale,
+      );
+      this.settingsButtonText?.setScale(
+        menuButtonTextBaseScaleX * scale,
+        menuButtonTextBaseScaleY * scale,
+      );
+    };
+
+    this.settingsButtonBg
+      .on("pointerover", () => applySettingsMenuButtonHover(true))
+      .on("pointerout", () => applySettingsMenuButtonHover(false));
+    this.settingsButtonText
+      ?.on("pointerover", () => applySettingsMenuButtonHover(true))
+      .on("pointerout", () => applySettingsMenuButtonHover(false));
+
     this.settingsMenuOpen = false;
     this.menuPausedGame = false;
     this.settingsBackdrop = this.add
@@ -130,12 +152,29 @@ export class UIScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .on("pointerdown", () => this.setSettingsMenuOpen(false));
 
-    const frameWidth = 640;
-    const frameHeight = this.getImageHeightByWidth(
-      "frame-menu-game",
-      frameWidth,
+    const hasFrameMenuTexture = this.textures.exists("frame-menu-game");
+    const frameTexture = hasFrameMenuTexture
+      ? this.textures.get("frame-menu-game")?.getSourceImage?.()
+      : null;
+    const baseFrameWidth = 640;
+    const frameScale = hasFrameMenuTexture ? 4 / 3 : 1;
+    const targetFrameWidth = Math.round(baseFrameWidth * frameScale);
+    const maxFrameWidth = Math.round(GAME_WIDTH * 0.62);
+    const frameSourceWidth = frameTexture?.width ?? 460;
+    const frameSourceHeight = frameTexture?.height ?? 590;
+    const frameAspect = frameSourceHeight / Math.max(1, frameSourceWidth);
+    const frameWidth = hasFrameMenuTexture
+      ? Math.min(targetFrameWidth, maxFrameWidth)
+      : 460;
+    const frameHeight = hasFrameMenuTexture
+      ? Math.round(frameWidth * frameAspect)
+      : 590;
+    const panelTopY = Math.max(
+      20,
+      Math.round((GAME_HEIGHT - frameHeight) * 0.5),
     );
-    if (this.textures.exists("frame-menu-game")) {
+
+    if (hasFrameMenuTexture) {
       this.settingsPanel = this.add
         .image(panelX, panelTopY, "frame-menu-game")
         .setOrigin(0.5, 0)
@@ -151,21 +190,27 @@ export class UIScene extends Phaser.Scene {
         .setVisible(false);
     }
 
-    const panelHeight = frameHeight > 0 ? frameHeight : 350;
-    const titleY = panelTopY + 8;
-    const speedSubtitleY = panelTopY + 62;
-    const sliderY = panelTopY + 128;
-    const valueY = panelTopY + 152;
-    const fullscreenY = panelTopY + 184;
-    const restartY = panelTopY + 216;
-    const exitY = panelTopY + 248;
+    const panelHeight = frameHeight;
+    const frameUiScale = hasFrameMenuTexture
+      ? Phaser.Math.Clamp(frameWidth / baseFrameWidth, 1, 1.35)
+      : 1;
+    const textScale = frameUiScale;
+    const sliderScale = frameUiScale;
+    const titleY = panelTopY + Math.round(panelHeight * 0.16) - 6;
+    const speedSubtitleY = panelTopY + Math.round(panelHeight * 0.33);
+    const sliderY = panelTopY + Math.round(panelHeight * 0.44);
+    const valueY = panelTopY + Math.round(panelHeight * 0.52);
+    const actionRowY = panelTopY + Math.round(panelHeight * 0.72) - 20;
+    const actionGap = Math.round(frameWidth * 0.12);
 
     this.settingsTitle = this.add
       .text(panelX, titleY, "Cài đặt", {
         fontFamily: "Verdana",
-        fontSize: "20px",
-        color: "#f0e5c9",
+        fontSize: `${Math.round(20 * textScale)}px`,
+        color: "#f2cf86",
         fontStyle: "bold",
+        stroke: "#2a1a0e",
+        strokeThickness: 4,
       })
       .setOrigin(0.5, 0)
       .setDepth(221)
@@ -178,9 +223,11 @@ export class UIScene extends Phaser.Scene {
     this.speedSubtitle = this.add
       .text(panelX, speedSubtitleY, "Tốc độ trò chơi", {
         fontFamily: "Verdana",
-        fontSize: "16px",
-        color: "#d8ccb2",
+        fontSize: `${Math.round(16 * textScale)}px`,
+        color: "#5b3e24",
         fontStyle: "bold",
+        stroke: "#f4e8d1",
+        strokeThickness: 1,
       })
       .setOrigin(0.5, 0)
       .setDepth(221)
@@ -189,7 +236,7 @@ export class UIScene extends Phaser.Scene {
     this.speedMin = 1;
     this.speedMax = 3;
     this.speedStep = 0.05;
-    this.speedSliderTrackWidth = 230;
+    this.speedSliderTrackWidth = Math.round(230 * sliderScale);
     this.speedSliderY = sliderY;
 
     this.speedSliderTrack = this.add
@@ -197,7 +244,7 @@ export class UIScene extends Phaser.Scene {
         panelX,
         this.speedSliderY,
         this.speedSliderTrackWidth,
-        8,
+        Math.round(8 * sliderScale),
         0x14181d,
         0.95,
       )
@@ -211,7 +258,7 @@ export class UIScene extends Phaser.Scene {
         panelX - this.speedSliderTrackWidth * 0.5,
         this.speedSliderY,
         this.speedSliderTrackWidth,
-        10,
+        Math.round(10 * sliderScale),
         0x66cc7c,
         0.95,
       )
@@ -220,7 +267,13 @@ export class UIScene extends Phaser.Scene {
       .setVisible(false);
 
     this.speedSliderKnob = this.add
-      .circle(panelX, this.speedSliderY, 10, 0xf0e5c9, 1)
+      .circle(
+        panelX,
+        this.speedSliderY,
+        Math.round(10 * sliderScale),
+        0xf0e5c9,
+        1,
+      )
       .setStrokeStyle(2, 0x2b2f34, 0.95)
       .setDepth(223)
       .setVisible(false)
@@ -230,8 +283,8 @@ export class UIScene extends Phaser.Scene {
       .rectangle(
         panelX,
         this.speedSliderY,
-        this.speedSliderTrackWidth + 44,
-        30,
+        this.speedSliderTrackWidth + Math.round(44 * sliderScale),
+        Math.round(30 * sliderScale),
         0xffffff,
         0.001,
       )
@@ -242,13 +295,15 @@ export class UIScene extends Phaser.Scene {
     this.speedMinLabel = this.add
       .text(
         panelX - this.speedSliderTrackWidth * 0.5,
-        this.speedSliderY + 18,
+        this.speedSliderY + Math.round(18 * sliderScale),
         "1x",
         {
           fontFamily: "Verdana",
-          fontSize: "14px",
-          color: "#b9ae99",
+          fontSize: `${Math.round(14 * textScale)}px`,
+          color: "#6a4d2f",
           fontStyle: "bold",
+          stroke: "#f3e8d3",
+          strokeThickness: 1,
         },
       )
       .setOrigin(0.5, 0)
@@ -258,13 +313,15 @@ export class UIScene extends Phaser.Scene {
     this.speedMaxLabel = this.add
       .text(
         panelX + this.speedSliderTrackWidth * 0.5,
-        this.speedSliderY + 18,
+        this.speedSliderY + Math.round(18 * sliderScale),
         "3x",
         {
           fontFamily: "Verdana",
-          fontSize: "14px",
-          color: "#b9ae99",
+          fontSize: `${Math.round(14 * textScale)}px`,
+          color: "#6a4d2f",
           fontStyle: "bold",
+          stroke: "#f3e8d3",
+          strokeThickness: 1,
         },
       )
       .setOrigin(0.5, 0)
@@ -274,9 +331,11 @@ export class UIScene extends Phaser.Scene {
     this.speedValueText = this.add
       .text(panelX, valueY, "1x", {
         fontFamily: "Verdana",
-        fontSize: "18px",
-        color: "#8fe38d",
+        fontSize: `${Math.round(18 * textScale)}px`,
+        color: "#2f9b54",
         fontStyle: "bold",
+        stroke: "#163622",
+        strokeThickness: 2,
       })
       .setOrigin(0.5, 0)
       .setDepth(221)
@@ -297,43 +356,40 @@ export class UIScene extends Phaser.Scene {
     this.input.on("pointermove", this.handleSpeedSliderDrag, this);
     this.input.on("pointerup", this.handleSpeedSliderPointerUp, this);
 
-    this.fullscreenMenuItem = this.add
-      .text(panelX, fullscreenY, "Toàn màn hình", {
-        fontFamily: "Verdana",
-        fontSize: "16px",
-        color: "#f0e5c9",
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5, 0)
-      .setDepth(221)
-      .setVisible(false)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerdown", this.toggleFullscreenFromMenu, this);
+    this.fullscreenMenuItem = null;
 
     this.exitMenuItem = this.add
-      .text(panelX, exitY, "Thoát", {
+      .text(panelX + actionGap, actionRowY, "Thoát", {
         fontFamily: "Verdana",
-        fontSize: "18px",
-        color: "#ff9f9f",
+        fontSize: `${Math.round(18 * textScale)}px`,
+        color: "#b44a58",
         fontStyle: "bold",
+        stroke: "#ffe6ea",
+        strokeThickness: 1,
       })
-      .setOrigin(0.5, 0)
+      .setOrigin(0.5)
       .setDepth(221)
       .setVisible(false)
       .setInteractive({ useHandCursor: true })
+      .on("pointerover", () => this.exitMenuItem.setScale(1.06))
+      .on("pointerout", () => this.exitMenuItem.setScale(1))
       .on("pointerdown", this.exitToHome, this);
 
     this.restartMenuItem = this.add
-      .text(panelX, restartY, "Chơi lại", {
+      .text(panelX - actionGap, actionRowY, "Chơi lại", {
         fontFamily: "Verdana",
-        fontSize: "16px",
-        color: "#8fe38d",
+        fontSize: `${Math.round(16 * textScale)}px`,
+        color: "#2f9b54",
         fontStyle: "bold",
+        stroke: "#e7f7ea",
+        strokeThickness: 1,
       })
-      .setOrigin(0.5, 0)
+      .setOrigin(0.5)
       .setDepth(221)
       .setVisible(false)
       .setInteractive({ useHandCursor: true })
+      .on("pointerover", () => this.restartMenuItem.setScale(1.06))
+      .on("pointerout", () => this.restartMenuItem.setScale(1))
       .on("pointerdown", this.restartFromMenu, this);
 
     this.settingsButtonBg.on(
@@ -410,7 +466,6 @@ export class UIScene extends Phaser.Scene {
       inside(this.speedSliderHitArea) ||
       inside(this.speedSliderKnob) ||
       inside(this.speedValueText) ||
-      inside(this.fullscreenMenuItem) ||
       inside(this.restartMenuItem) ||
       inside(this.exitMenuItem)
     ) {
@@ -525,17 +580,12 @@ export class UIScene extends Phaser.Scene {
     setInputEnabled(this.settingsBackdrop, visible);
     setInputEnabled(this.speedSliderHitArea, visible);
     setInputEnabled(this.speedSliderKnob, visible);
-    setInputEnabled(this.fullscreenMenuItem, visible);
     setInputEnabled(this.restartMenuItem, visible);
     setInputEnabled(this.exitMenuItem, visible);
 
     const currentSpeed = this.registry.get("gameSpeed") ?? 1;
     this.updateSpeedSliderUi(currentSpeed);
 
-    this.fullscreenMenuItem.setVisible(visible);
-    this.fullscreenMenuItem.setText(
-      this.isFullscreenActive() ? "Thu nhỏ màn" : "Toàn màn",
-    );
     this.restartMenuItem.setVisible(visible);
     this.exitMenuItem.setVisible(visible);
   }
