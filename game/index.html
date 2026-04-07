@@ -60,7 +60,9 @@
             tryLockLandscape();
           };
 
-          window.addEventListener("pointerdown", gestureHandler, { once: true });
+          window.addEventListener("pointerdown", gestureHandler, {
+            once: true,
+          });
           window.addEventListener("touchstart", gestureHandler, {
             once: true,
             passive: true,
