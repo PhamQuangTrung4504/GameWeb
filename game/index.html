@@ -23,10 +23,27 @@
           /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
         const isMobileBrowser = mobileUA.test(navigator.userAgent || "");
 
+        const updateViewportVars = () => {
+          const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+          const viewportHeight =
+            window.visualViewport?.height ?? window.innerHeight;
+
+          document.documentElement.style.setProperty(
+            "--mobile-viewport-width",
+            `${viewportWidth}px`,
+          );
+          document.documentElement.style.setProperty(
+            "--mobile-viewport-height",
+            `${viewportHeight}px`,
+          );
+        };
+
         const applyMobileLayout = () => {
           if (!document.body) {
             return;
           }
+
+          updateViewportVars();
 
           document.body.classList.toggle("is-mobile-browser", isMobileBrowser);
 
@@ -35,9 +52,10 @@
             return;
           }
 
-          const isPortrait =
-            window.matchMedia?.("(orientation: portrait)")?.matches ??
-            window.innerHeight > window.innerWidth;
+          const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+          const viewportHeight =
+            window.visualViewport?.height ?? window.innerHeight;
+          const isPortrait = viewportHeight > viewportWidth;
           document.body.classList.toggle("mobile-force-landscape", isPortrait);
         };
 
@@ -73,6 +91,12 @@
         window.addEventListener("orientationchange", applyMobileLayout, {
           passive: true,
         });
+
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener("resize", applyMobileLayout, {
+            passive: true,
+          });
+        }
       })();
     </script>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
@@ -107,6 +131,8 @@
     <style>
       :root {
         color-scheme: light;
+        --mobile-viewport-width: 100vw;
+        --mobile-viewport-height: 100dvh;
       }
 
       * {
@@ -151,15 +177,15 @@
           visibility 0.42s ease;
       }
 
-      body.is-mobile-browser.mobile-force-landscape #loading-screen,
       body.is-mobile-browser.mobile-force-landscape #game-root {
+        position: fixed;
         inset: auto;
         top: 50%;
         left: 50%;
-        width: 100dvh;
-        height: 100dvw;
-        max-width: 100dvh;
-        max-height: 100dvw;
+        width: var(--mobile-viewport-height);
+        height: var(--mobile-viewport-width);
+        max-width: none;
+        max-height: none;
         transform: translate(-50%, -50%) rotate(90deg);
         transform-origin: center center;
       }
