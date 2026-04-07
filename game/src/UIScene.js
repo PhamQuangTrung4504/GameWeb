@@ -74,6 +74,36 @@ export class UIScene extends Phaser.Scene {
     this.previousWave = null;
     this.lastMessageMarker = null;
     this.feedbackText = null;
+    this.uiValueCache = Object.create(null);
+  }
+
+  setTextIfChanged(target, key, nextText) {
+    const safeText = `${nextText ?? ""}`;
+    if (this.uiValueCache[key] === safeText) {
+      return;
+    }
+
+    this.uiValueCache[key] = safeText;
+    target?.setText?.(safeText);
+  }
+
+  setColorIfChanged(target, key, nextColor) {
+    if (this.uiValueCache[key] === nextColor) {
+      return;
+    }
+
+    this.uiValueCache[key] = nextColor;
+    target?.setColor?.(nextColor);
+  }
+
+  setAlphaIfChanged(target, key, nextAlpha, precision = 1000) {
+    const normalized = Math.round((nextAlpha ?? 1) * precision) / precision;
+    if (this.uiValueCache[key] === normalized) {
+      return;
+    }
+
+    this.uiValueCache[key] = normalized;
+    target?.setAlpha?.(normalized);
   }
 
   createSettingsMenu() {
@@ -1288,11 +1318,15 @@ export class UIScene extends Phaser.Scene {
     this.hpBarCap.x = this.hpBarFill.x + this.hpBarFill.width;
     this.energyBarCap.x = this.energyBarFill.x + this.energyBarFill.width;
 
-    this.hpValueText.setText(`${hp} / ${maxHP}`);
-    this.energyValueText.setText(`${energy} / ${maxEnergy}`);
-    this.coinText.setText(`$ ${coin}`);
+    this.setTextIfChanged(this.hpValueText, "hud.hp", `${hp} / ${maxHP}`);
+    this.setTextIfChanged(
+      this.energyValueText,
+      "hud.energy",
+      `${energy} / ${maxEnergy}`,
+    );
+    this.setTextIfChanged(this.coinText, "hud.coin", `$ ${coin}`);
 
-    this.waveText.setText(`WAVE ${wave}`);
+    this.setTextIfChanged(this.waveText, "hud.wave", `WAVE ${wave}`);
 
     const skillAvailable = cooldownMs <= 0 && skillReady;
     const meteorSkillAvailable = meteorCooldownMs <= 0 && meteorSkillReady;
@@ -1314,33 +1348,79 @@ export class UIScene extends Phaser.Scene {
       ? 1
       : Phaser.Math.Linear(0.28, 0.8, meteorCooldownProgress);
 
-    this.skillIcon.setAlpha(skillAlpha);
-    this.meteorSkillIcon.setAlpha(meteorAlpha);
+    this.setAlphaIfChanged(this.skillIcon, "skill.alpha.tornado", skillAlpha);
+    this.setAlphaIfChanged(
+      this.meteorSkillIcon,
+      "skill.alpha.meteor",
+      meteorAlpha,
+    );
 
     if (skillAvailable) {
-      this.skillMetaText.setColor("#f6edbf");
-      this.skillMetaText.setText(`Q - ${SKILL_CONFIG.energyCost} EN`);
+      this.setColorIfChanged(
+        this.skillMetaText,
+        "skill.meta.q.color",
+        "#f6edbf",
+      );
+      this.setTextIfChanged(
+        this.skillMetaText,
+        "skill.meta.q.text",
+        `Q - ${SKILL_CONFIG.energyCost} EN`,
+      );
     } else if (cooldownMs > 0) {
-      this.skillMetaText.setColor("#d9c18a");
-      this.skillMetaText.setText(`Q - ${(cooldownMs / 1000).toFixed(1)}s`);
+      this.setColorIfChanged(
+        this.skillMetaText,
+        "skill.meta.q.color",
+        "#d9c18a",
+      );
+      this.setTextIfChanged(
+        this.skillMetaText,
+        "skill.meta.q.text",
+        `Q - ${(cooldownMs / 1000).toFixed(1)}s`,
+      );
     } else {
-      this.skillMetaText.setColor("#d28d8d");
-      this.skillMetaText.setText(`Q - ${SKILL_CONFIG.energyCost} EN`);
+      this.setColorIfChanged(
+        this.skillMetaText,
+        "skill.meta.q.color",
+        "#d28d8d",
+      );
+      this.setTextIfChanged(
+        this.skillMetaText,
+        "skill.meta.q.text",
+        `Q - ${SKILL_CONFIG.energyCost} EN`,
+      );
     }
 
     if (meteorSkillAvailable) {
-      this.meteorSkillMetaText.setColor("#f6edbf");
-      this.meteorSkillMetaText.setText(
+      this.setColorIfChanged(
+        this.meteorSkillMetaText,
+        "skill.meta.e.color",
+        "#f6edbf",
+      );
+      this.setTextIfChanged(
+        this.meteorSkillMetaText,
+        "skill.meta.e.text",
         `E - ${SKILL_CONFIG.meteorEnergyCost} EN`,
       );
     } else if (meteorCooldownMs > 0) {
-      this.meteorSkillMetaText.setColor("#d9c18a");
-      this.meteorSkillMetaText.setText(
+      this.setColorIfChanged(
+        this.meteorSkillMetaText,
+        "skill.meta.e.color",
+        "#d9c18a",
+      );
+      this.setTextIfChanged(
+        this.meteorSkillMetaText,
+        "skill.meta.e.text",
         `E - ${(meteorCooldownMs / 1000).toFixed(1)}s`,
       );
     } else {
-      this.meteorSkillMetaText.setColor("#d28d8d");
-      this.meteorSkillMetaText.setText(
+      this.setColorIfChanged(
+        this.meteorSkillMetaText,
+        "skill.meta.e.color",
+        "#d28d8d",
+      );
+      this.setTextIfChanged(
+        this.meteorSkillMetaText,
+        "skill.meta.e.text",
         `E - ${SKILL_CONFIG.meteorEnergyCost} EN`,
       );
     }
@@ -1387,22 +1467,58 @@ export class UIScene extends Phaser.Scene {
 
     const rangedCardReady = rangedCardCooldownMs <= 0 && coin >= rangedUnitCost;
     const meleeCardReady = meleeCardCooldownMs <= 0 && coin >= meleeUnitCost;
-    this.rangedCard.setAlpha(rangedCardReady ? 1 : 0.45);
-    this.meleeCard.setAlpha(meleeCardReady ? 1 : 0.45);
+    this.setAlphaIfChanged(
+      this.rangedCard,
+      "card.alpha.ranged",
+      rangedCardReady ? 1 : 0.45,
+    );
+    this.setAlphaIfChanged(
+      this.meleeCard,
+      "card.alpha.melee",
+      meleeCardReady ? 1 : 0.45,
+    );
 
-    this.rangedUpgradeIcon.setAlpha(coin >= upgradeCostRanged ? 1 : 0.45);
-    this.meleeUpgradeIcon.setAlpha(coin >= upgradeCostMelee ? 1 : 0.45);
-    this.rangedUpgradeCostText.setText(`Cost ${upgradeCostRanged}`);
-    this.meleeUpgradeCostText.setText(`Cost ${upgradeCostMelee}`);
-    this.rangedUpgradeCostText.setColor(
+    this.setAlphaIfChanged(
+      this.rangedUpgradeIcon,
+      "upgrade.alpha.ranged",
+      coin >= upgradeCostRanged ? 1 : 0.45,
+    );
+    this.setAlphaIfChanged(
+      this.meleeUpgradeIcon,
+      "upgrade.alpha.melee",
+      coin >= upgradeCostMelee ? 1 : 0.45,
+    );
+    this.setTextIfChanged(
+      this.rangedUpgradeCostText,
+      "upgrade.cost.ranged.text",
+      `Cost ${upgradeCostRanged}`,
+    );
+    this.setTextIfChanged(
+      this.meleeUpgradeCostText,
+      "upgrade.cost.melee.text",
+      `Cost ${upgradeCostMelee}`,
+    );
+    this.setColorIfChanged(
+      this.rangedUpgradeCostText,
+      "upgrade.cost.ranged.color",
       coin >= upgradeCostRanged ? "#efe3c8" : "#d28d8d",
     );
-    this.meleeUpgradeCostText.setColor(
+    this.setColorIfChanged(
+      this.meleeUpgradeCostText,
+      "upgrade.cost.melee.color",
       coin >= upgradeCostMelee ? "#efe3c8" : "#d28d8d",
     );
 
-    this.rangedLevelText.setColor(rangedCardReady ? "#efe3c8" : "#d28d8d");
-    this.meleeLevelText.setColor(meleeCardReady ? "#efe3c8" : "#d28d8d");
+    this.setColorIfChanged(
+      this.rangedLevelText,
+      "card.level.ranged.color",
+      rangedCardReady ? "#efe3c8" : "#d28d8d",
+    );
+    this.setColorIfChanged(
+      this.meleeLevelText,
+      "card.level.melee.color",
+      meleeCardReady ? "#efe3c8" : "#d28d8d",
+    );
 
     if (hpRatio < 0.3) {
       this.enableHpLowPulse();
@@ -1422,7 +1538,7 @@ export class UIScene extends Phaser.Scene {
     }
 
     if (hp <= 0) {
-      this.gameOverText.setText("Defeated");
+      this.setTextIfChanged(this.gameOverText, "hud.gameover", "Defeated");
     }
   }
 

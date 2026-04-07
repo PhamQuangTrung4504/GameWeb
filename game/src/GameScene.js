@@ -191,10 +191,7 @@ export class GameScene extends Phaser.Scene {
       },
     );
 
-    this.load.spritesheet("skill-tornado", "assets/skill/skill_loc_xoay.png", {
-      frameWidth: 48,
-      frameHeight: 48,
-    });
+    this.load.image("skill-tornado", "assets/skill/skill_loc_xoay.png");
     this.load.image("skill-meteor", "assets/skill/skill_thien_thach.png");
     this.load.spritesheet(
       "bird-idle-sheet",
@@ -293,6 +290,7 @@ export class GameScene extends Phaser.Scene {
     this.touchMoveAxis = 0;
     this.touchMoveUntil = 0;
     this.uiMessageId = 0;
+    this.uiRegistryCache = Object.create(null);
 
     this.input.mouse.disableContextMenu();
     this.leftKey = this.input.keyboard.addKey(
@@ -541,32 +539,41 @@ export class GameScene extends Phaser.Scene {
       this.meleeLevel,
     );
 
-    this.registry.set("hp", this.baseHp);
-    this.registry.set("baseHP", this.baseHp);
-    this.registry.set("maxHP", this.baseMaxHp);
-    this.registry.set("coin", this.coin);
-    this.registry.set("energy", this.energy);
-    this.registry.set("maxEnergy", MAX_ENERGY);
-    this.registry.set("wave", this.wave);
-    this.registry.set("skillCooldown", skillCooldownMs);
-    this.registry.set("skillReady", skillReady);
-    this.registry.set("meteorSkillCooldown", meteorSkillCooldownMs);
-    this.registry.set("meteorSkillReady", meteorSkillReady);
-    this.registry.set("rangedCardCooldownMs", rangedCardCooldownMs);
-    this.registry.set("meleeCardCooldownMs", meleeCardCooldownMs);
-    this.registry.set("unitCostRanged", rangedUnitCost);
-    this.registry.set("unitCostMelee", meleeUnitCost);
-    this.registry.set("rangedLevel", this.rangedLevel);
-    this.registry.set("meleeLevel", this.meleeLevel);
-    this.registry.set("upgradeCostRanged", upgradeCostRanged);
-    this.registry.set("upgradeCostMelee", upgradeCostMelee);
-    this.registry.set("difficulty", this.difficultyKey);
-    this.registry.set(
+    this.setRegistryIfChanged("hp", this.baseHp);
+    this.setRegistryIfChanged("baseHP", this.baseHp);
+    this.setRegistryIfChanged("maxHP", this.baseMaxHp);
+    this.setRegistryIfChanged("coin", this.coin);
+    this.setRegistryIfChanged("energy", this.energy);
+    this.setRegistryIfChanged("maxEnergy", MAX_ENERGY);
+    this.setRegistryIfChanged("wave", this.wave);
+    this.setRegistryIfChanged("skillCooldown", skillCooldownMs);
+    this.setRegistryIfChanged("skillReady", skillReady);
+    this.setRegistryIfChanged("meteorSkillCooldown", meteorSkillCooldownMs);
+    this.setRegistryIfChanged("meteorSkillReady", meteorSkillReady);
+    this.setRegistryIfChanged("rangedCardCooldownMs", rangedCardCooldownMs);
+    this.setRegistryIfChanged("meleeCardCooldownMs", meleeCardCooldownMs);
+    this.setRegistryIfChanged("unitCostRanged", rangedUnitCost);
+    this.setRegistryIfChanged("unitCostMelee", meleeUnitCost);
+    this.setRegistryIfChanged("rangedLevel", this.rangedLevel);
+    this.setRegistryIfChanged("meleeLevel", this.meleeLevel);
+    this.setRegistryIfChanged("upgradeCostRanged", upgradeCostRanged);
+    this.setRegistryIfChanged("upgradeCostMelee", upgradeCostMelee);
+    this.setRegistryIfChanged("difficulty", this.difficultyKey);
+    this.setRegistryIfChanged(
       "difficultyLabel",
       this.difficultyPresets[this.difficultyKey]?.label ?? "Trung bình",
     );
-    this.registry.set("gameSpeed", this.gameSpeedMultiplier);
-    this.registry.set("gameOver", this.isGameOver);
+    this.setRegistryIfChanged("gameSpeed", this.gameSpeedMultiplier);
+    this.setRegistryIfChanged("gameOver", this.isGameOver);
+  }
+
+  setRegistryIfChanged(key, value) {
+    if (this.uiRegistryCache[key] === value) {
+      return;
+    }
+
+    this.uiRegistryCache[key] = value;
+    this.registry.set(key, value);
   }
 
   getGameTimeMs() {
@@ -1305,10 +1312,19 @@ export class GameScene extends Phaser.Scene {
     }
 
     const fx = this.add
-      .sprite(x, y + 2, "skill-tornado")
+      .image(x, y + 2, "skill-tornado")
       .setDepth(22)
       .setDisplaySize(240, 240)
-      .play("skill-tornado-spin", true);
+      .setAngle(-8);
+
+    const swayTween = this.tweens.add({
+      targets: fx,
+      angle: 8,
+      duration: 110,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
 
     this.tweens.add({
       targets: fx,
@@ -1316,7 +1332,10 @@ export class GameScene extends Phaser.Scene {
       scaleX: 1.35,
       scaleY: 1.35,
       duration: 300,
-      onComplete: () => fx.destroy(),
+      onComplete: () => {
+        swayTween.stop();
+        fx.destroy();
+      },
     });
   }
 
@@ -1331,10 +1350,19 @@ export class GameScene extends Phaser.Scene {
     const impacted = new Set();
 
     const fx = this.add
-      .sprite(startX, y, "skill-tornado")
+      .image(startX, y, "skill-tornado")
       .setDepth(26)
       .setDisplaySize(272, 272)
-      .play("skill-tornado-spin", true);
+      .setAngle(-9);
+
+    const swayTween = this.tweens.add({
+      targets: fx,
+      angle: 9,
+      duration: 100,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
 
     this.tweens.add({
       targets: fx,
@@ -1362,6 +1390,7 @@ export class GameScene extends Phaser.Scene {
         }
       },
       onComplete: () => {
+        swayTween.stop();
         if (fx.active) {
           fx.destroy();
         }
@@ -1686,14 +1715,18 @@ export class GameScene extends Phaser.Scene {
       yoyo: true,
     });
 
-    ensureAnim("skill-tornado-spin", {
-      frames: this.anims.generateFrameNumbers("skill-tornado", {
-        start: 0,
-        end: 1,
-      }),
-      frameRate: 16,
-      repeat: -1,
-    });
+    const tornadoTexture = this.textures.get("skill-tornado");
+    const tornadoFrameTotal = tornadoTexture?.frameTotal ?? 0;
+    if (tornadoFrameTotal > 1) {
+      ensureAnim("skill-tornado-spin", {
+        frames: this.anims.generateFrameNumbers("skill-tornado", {
+          start: 0,
+          end: Math.min(1, tornadoFrameTotal - 1),
+        }),
+        frameRate: 16,
+        repeat: -1,
+      });
+    }
 
     if (this.textures.exists("bird-idle-sheet")) {
       ensureAnim("bird-idle-loop", {

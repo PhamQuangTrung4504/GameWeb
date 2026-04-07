@@ -571,6 +571,8 @@ export class SkillSystem {
     this.scene = scene;
     this.lastUsedAt = -SKILL_CONFIG.cooldownMs;
     this.lastMeteorUsedAt = -SKILL_CONFIG.meteorCooldownMs;
+    this.lastSkillCooldownMs = null;
+    this.lastMeteorCooldownMs = null;
     this.keyQ = scene.input.keyboard.addKey(SKILL_CONFIG.key);
     this.keyE = scene.input.keyboard.addKey(SKILL_CONFIG.meteorKey);
   }
@@ -584,11 +586,18 @@ export class SkillSystem {
       0,
       SKILL_CONFIG.meteorCooldownMs - (time - this.lastMeteorUsedAt),
     );
-    this.scene.registry.set("skillCooldownMs", Math.ceil(cooldownRemaining));
-    this.scene.registry.set(
-      "meteorSkillCooldownMs",
-      Math.ceil(meteorCooldownRemaining),
-    );
+    const nextSkillCooldownMs = Math.ceil(cooldownRemaining);
+    const nextMeteorCooldownMs = Math.ceil(meteorCooldownRemaining);
+
+    if (nextSkillCooldownMs !== this.lastSkillCooldownMs) {
+      this.lastSkillCooldownMs = nextSkillCooldownMs;
+      this.scene.registry.set("skillCooldownMs", nextSkillCooldownMs);
+    }
+
+    if (nextMeteorCooldownMs !== this.lastMeteorCooldownMs) {
+      this.lastMeteorCooldownMs = nextMeteorCooldownMs;
+      this.scene.registry.set("meteorSkillCooldownMs", nextMeteorCooldownMs);
+    }
 
     if (Phaser.Input.Keyboard.JustDown(this.keyQ)) {
       this.tryCast(time);

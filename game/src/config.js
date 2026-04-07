@@ -197,6 +197,12 @@ export function buildGameConfig(HomeScene, GameScene, UIScene) {
     physics: {
       default: "arcade",
     },
+    fps: {
+      target: 60,
+      min: 50,
+      forceSetTimeOut: false,
+      smoothStep: true,
+    },
     scene: [HomeScene, GameScene, UIScene],
   };
 }
