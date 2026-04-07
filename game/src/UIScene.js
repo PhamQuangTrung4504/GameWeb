@@ -77,13 +77,13 @@ export class UIScene extends Phaser.Scene {
   }
 
   createSettingsMenu() {
-    const btnX = GAME_WIDTH - 96;
-    const btnY = 56;
+    const btnX = GAME_WIDTH - 140;
+    const btnY = 58;
     const panelX = GAME_WIDTH * 0.5;
-    const panelTopY = GAME_HEIGHT * 0.5 - 195;
+    const panelTopY = GAME_HEIGHT * 0.5 - 168;
 
     if (this.textures.exists("button-menu-game")) {
-      const menuButtonWidth = 170;
+      const menuButtonWidth = 258;
       this.settingsButtonBg = this.add
         .image(btnX, btnY, "button-menu-game")
         .setDisplaySize(
@@ -96,7 +96,7 @@ export class UIScene extends Phaser.Scene {
       this.settingsButtonText = null;
     } else {
       this.settingsButtonBg = this.add
-        .rectangle(btnX, btnY, 168, 54, 0x2b2f34, 0.9)
+        .rectangle(btnX, btnY, 252, 81, 0x2b2f34, 0.9)
         .setOrigin(0.5)
         .setStrokeStyle(3, 0x8a7858, 0.9)
         .setDepth(220)
@@ -105,7 +105,7 @@ export class UIScene extends Phaser.Scene {
       this.settingsButtonText = this.add
         .text(btnX, btnY, "Setting", {
           fontFamily: "Verdana",
-          fontSize: "20px",
+          fontSize: "30px",
           color: "#f0e5c9",
           fontStyle: "bold",
         })
@@ -130,15 +130,16 @@ export class UIScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .on("pointerdown", () => this.setSettingsMenuOpen(false));
 
+    const frameWidth = 640;
+    const frameHeight = this.getImageHeightByWidth(
+      "frame-menu-game",
+      frameWidth,
+    );
     if (this.textures.exists("frame-menu-game")) {
-      const frameWidth = 840;
       this.settingsPanel = this.add
         .image(panelX, panelTopY, "frame-menu-game")
         .setOrigin(0.5, 0)
-        .setDisplaySize(
-          frameWidth,
-          this.getImageHeightByWidth("frame-menu-game", frameWidth),
-        )
+        .setDisplaySize(frameWidth, frameHeight)
         .setDepth(219)
         .setVisible(false);
     } else {
@@ -150,19 +151,19 @@ export class UIScene extends Phaser.Scene {
         .setVisible(false);
     }
 
-    const panelHeight = this.settingsPanel.displayHeight || 590;
-    const titleY = panelTopY + panelHeight * 0.08;
-    const speedSubtitleY = panelTopY + panelHeight * 0.27;
-    const sliderY = panelTopY + panelHeight * 0.47;
-    const valueY = sliderY + panelHeight * 0.1;
-    const fullscreenY = panelTopY + panelHeight * 0.6;
-    const restartY = panelTopY + panelHeight * 0.7;
-    const exitY = panelTopY + panelHeight * 0.8;
+    const panelHeight = frameHeight > 0 ? frameHeight : 350;
+    const titleY = panelTopY + 8;
+    const speedSubtitleY = panelTopY + 62;
+    const sliderY = panelTopY + 128;
+    const valueY = panelTopY + 152;
+    const fullscreenY = panelTopY + 184;
+    const restartY = panelTopY + 216;
+    const exitY = panelTopY + 248;
 
     this.settingsTitle = this.add
-      .text(panelX, titleY, "CAI DAT", {
+      .text(panelX, titleY, "Cài đặt", {
         fontFamily: "Verdana",
-        fontSize: "24px",
+        fontSize: "20px",
         color: "#f0e5c9",
         fontStyle: "bold",
       })
@@ -175,9 +176,9 @@ export class UIScene extends Phaser.Scene {
     this.difficultyMenuItems = [];
 
     this.speedSubtitle = this.add
-      .text(panelX, speedSubtitleY, "Toc do tro choi", {
+      .text(panelX, speedSubtitleY, "Tốc độ trò chơi", {
         fontFamily: "Verdana",
-        fontSize: "22px",
+        fontSize: "16px",
         color: "#d8ccb2",
         fontStyle: "bold",
       })
@@ -188,7 +189,7 @@ export class UIScene extends Phaser.Scene {
     this.speedMin = 1;
     this.speedMax = 3;
     this.speedStep = 0.05;
-    this.speedSliderTrackWidth = 300;
+    this.speedSliderTrackWidth = 230;
     this.speedSliderY = sliderY;
 
     this.speedSliderTrack = this.add
@@ -196,7 +197,7 @@ export class UIScene extends Phaser.Scene {
         panelX,
         this.speedSliderY,
         this.speedSliderTrackWidth,
-        10,
+        8,
         0x14181d,
         0.95,
       )
@@ -219,7 +220,7 @@ export class UIScene extends Phaser.Scene {
       .setVisible(false);
 
     this.speedSliderKnob = this.add
-      .circle(panelX, this.speedSliderY, 12, 0xf0e5c9, 1)
+      .circle(panelX, this.speedSliderY, 10, 0xf0e5c9, 1)
       .setStrokeStyle(2, 0x2b2f34, 0.95)
       .setDepth(223)
       .setVisible(false)
@@ -229,8 +230,8 @@ export class UIScene extends Phaser.Scene {
       .rectangle(
         panelX,
         this.speedSliderY,
-        this.speedSliderTrackWidth + 40,
-        36,
+        this.speedSliderTrackWidth + 44,
+        30,
         0xffffff,
         0.001,
       )
@@ -245,7 +246,7 @@ export class UIScene extends Phaser.Scene {
         "1x",
         {
           fontFamily: "Verdana",
-          fontSize: "18px",
+          fontSize: "14px",
           color: "#b9ae99",
           fontStyle: "bold",
         },
@@ -261,7 +262,7 @@ export class UIScene extends Phaser.Scene {
         "3x",
         {
           fontFamily: "Verdana",
-          fontSize: "18px",
+          fontSize: "14px",
           color: "#b9ae99",
           fontStyle: "bold",
         },
@@ -273,7 +274,7 @@ export class UIScene extends Phaser.Scene {
     this.speedValueText = this.add
       .text(panelX, valueY, "1x", {
         fontFamily: "Verdana",
-        fontSize: "22px",
+        fontSize: "18px",
         color: "#8fe38d",
         fontStyle: "bold",
       })
@@ -297,9 +298,9 @@ export class UIScene extends Phaser.Scene {
     this.input.on("pointerup", this.handleSpeedSliderPointerUp, this);
 
     this.fullscreenMenuItem = this.add
-      .text(panelX, fullscreenY, "Toan man", {
+      .text(panelX, fullscreenY, "Toàn màn hình", {
         fontFamily: "Verdana",
-        fontSize: "26px",
+        fontSize: "16px",
         color: "#f0e5c9",
         fontStyle: "bold",
       })
@@ -310,9 +311,9 @@ export class UIScene extends Phaser.Scene {
       .on("pointerdown", this.toggleFullscreenFromMenu, this);
 
     this.exitMenuItem = this.add
-      .text(panelX, exitY, "Thoat", {
+      .text(panelX, exitY, "Thoát", {
         fontFamily: "Verdana",
-        fontSize: "30px",
+        fontSize: "18px",
         color: "#ff9f9f",
         fontStyle: "bold",
       })
@@ -323,9 +324,9 @@ export class UIScene extends Phaser.Scene {
       .on("pointerdown", this.exitToHome, this);
 
     this.restartMenuItem = this.add
-      .text(panelX, restartY, "Choi lai", {
+      .text(panelX, restartY, "Chơi lại", {
         fontFamily: "Verdana",
-        fontSize: "28px",
+        fontSize: "16px",
         color: "#8fe38d",
         fontStyle: "bold",
       })
@@ -622,145 +623,288 @@ export class UIScene extends Phaser.Scene {
   }
 
   createTopLeftHud(topPadding) {
-    const panelWidth = 342;
-    const panelHeight = 126;
-    const panelX = 190;
-    const panelY = topPadding + panelHeight * 0.5;
+    const hasCommandHudTexture = this.textures.exists("ui-command-hud");
+    const commandHudSource = hasCommandHudTexture
+      ? this.textures.get("ui-command-hud")?.getSourceImage?.()
+      : null;
+    const commandHudWidth = commandHudSource?.width ?? 420;
+    const commandHudHeight = commandHudSource?.height ?? 150;
+    const hudScale = hasCommandHudTexture
+      ? 420 / Math.max(1, commandHudWidth)
+      : 1;
+    const panelWidth = Math.round(commandHudWidth * hudScale);
+    const panelHeight = Math.round(commandHudHeight * hudScale);
+    const panelX = hasCommandHudTexture ? panelWidth * 0.5 - 8 : 214;
+    const panelY =
+      topPadding + panelHeight * 0.5 + (hasCommandHudTexture ? 2 : 4);
+    const panelLeft = panelX - panelWidth * 0.5;
+    const panelTop = panelY - panelHeight * 0.5;
+    const frameDepth = 10;
+    const contentDepth = 12;
 
-    this.resourcePanel = this.add
-      .rectangle(
-        panelX,
-        panelY,
-        panelWidth,
-        panelHeight,
-        this.theme.panelMid,
-        0.66,
+    if (hasCommandHudTexture) {
+      this.resourcePanel = this.add
+        .image(panelX, panelY, "ui-command-hud")
+        .setDisplaySize(panelWidth, panelHeight)
+        .setDepth(frameDepth)
+        .setOrigin(0.5);
+      this.hudTitle = null;
+    } else {
+      this.resourcePanel = this.add
+        .rectangle(
+          panelX,
+          panelY,
+          panelWidth,
+          panelHeight,
+          this.theme.panelMid,
+          0.66,
+        )
+        .setOrigin(0.5)
+        .setStrokeStyle(2, this.theme.border, 0.9)
+        .setDepth(frameDepth);
+
+      this.add
+        .rectangle(
+          panelX,
+          panelY - panelHeight * 0.5 + 13,
+          panelWidth,
+          26,
+          this.theme.panelDark,
+          0.72,
+        )
+        .setOrigin(0.5)
+        .setDepth(frameDepth + 1);
+
+      this.hudTitle = this.add
+        .text(panelLeft + 30, panelTop + 10, "COMMAND HUD", {
+          fontFamily: "Georgia",
+          fontSize: "14px",
+          color: this.theme.textSoft,
+          fontStyle: "bold",
+          letterSpacing: 1,
+        })
+        .setDepth(contentDepth);
+    }
+
+    const barWidthRatio = hasCommandHudTexture ? 0.395 : 0.47;
+    this.barWidth = Math.round(panelWidth * barWidthRatio);
+    this.hpBarWidth = hasCommandHudTexture
+      ? Math.max(12, this.barWidth - 4)
+      : this.barWidth;
+    this.energyBarWidth = hasCommandHudTexture
+      ? Math.max(12, this.barWidth - 1)
+      : this.barWidth;
+    this.barHeight = hasCommandHudTexture ? 21 : 11;
+    const hpBarHeight = hasCommandHudTexture
+      ? this.barHeight + 2
+      : this.barHeight;
+    const energyBarHeight = hasCommandHudTexture
+      ? this.barHeight + 2
+      : this.barHeight;
+
+    const hpBarY =
+      panelTop + panelHeight * (hasCommandHudTexture ? 0.35 : 0.36);
+    const energyBarY =
+      panelTop + panelHeight * (hasCommandHudTexture ? 0.515 : 0.53);
+    const labelX =
+      panelLeft + panelWidth * (hasCommandHudTexture ? 0.185 : 0.19);
+    const barX = panelLeft + panelWidth * (hasCommandHudTexture ? 0.335 : 0.35);
+    const energyBarX = hasCommandHudTexture ? barX + panelWidth * 0.01 : barX;
+    const hpValueX =
+      panelLeft + panelWidth * (hasCommandHudTexture ? 0.802 : 0.86);
+    const energyValueX = hasCommandHudTexture
+      ? hpValueX + panelWidth * 0.01
+      : hpValueX;
+    const valueOffsetY = hasCommandHudTexture ? 9 : 8;
+    const hpBarX = hasCommandHudTexture ? barX + 20 : barX;
+    const hpBarYAdjusted = hasCommandHudTexture ? hpBarY - 1 : hpBarY;
+    const energyBarXAdjusted = hasCommandHudTexture
+      ? energyBarX + 17
+      : energyBarX;
+    const energyBarYAdjusted = hasCommandHudTexture
+      ? energyBarY - 6
+      : energyBarY;
+    const hpValueXAdjusted = hasCommandHudTexture
+      ? hpBarX + this.hpBarWidth - 8
+      : hpValueX;
+    const energyValueXAdjusted = hasCommandHudTexture
+      ? energyBarXAdjusted + this.energyBarWidth - 8
+      : energyValueX;
+    const hpValueY = hasCommandHudTexture
+      ? hpBarYAdjusted
+      : hpBarYAdjusted - valueOffsetY;
+    const energyValueY = hasCommandHudTexture
+      ? energyBarYAdjusted
+      : energyBarYAdjusted - valueOffsetY;
+    const valueOriginY = hasCommandHudTexture ? 0.5 : 0;
+
+    this.hpLabel = this.add
+      .text(
+        labelX,
+        hpBarYAdjusted - valueOffsetY,
+        hasCommandHudTexture ? "" : "HP",
+        {
+          fontFamily: "Georgia",
+          fontSize: "14px",
+          color: "#f3d9d9",
+          fontStyle: "bold",
+        },
       )
-      .setOrigin(0.5)
-      .setStrokeStyle(2, this.theme.border, 0.9);
-
-    this.add
-      .rectangle(
-        panelX,
-        panelY - panelHeight * 0.5 + 13,
-        panelWidth,
-        26,
-        this.theme.panelDark,
-        0.72,
-      )
-      .setOrigin(0.5);
-
-    this.hudTitle = this.add.text(34, topPadding + 4, "COMMAND HUD", {
-      fontFamily: "Georgia",
-      fontSize: "12px",
-      color: this.theme.textSoft,
-      fontStyle: "bold",
-      letterSpacing: 1,
-    });
-
-    const hpBarY = topPadding + 42;
-    const energyBarY = topPadding + 70;
-
-    this.hpLabel = this.add.text(18, hpBarY - 10, "HP", {
-      fontFamily: "Georgia",
-      fontSize: "15px",
-      color: "#f3d9d9",
-      fontStyle: "bold",
-    });
+      .setDepth(contentDepth);
     this.hpBarBg = this.add
       .rectangle(
-        58,
-        hpBarY,
-        this.barWidth,
-        this.barHeight,
+        hpBarX,
+        hpBarYAdjusted,
+        this.hpBarWidth,
+        hpBarHeight,
         this.theme.hpBg,
         0.95,
       )
-      .setOrigin(0, 0.5);
+      .setOrigin(0, 0.5)
+      .setDepth(contentDepth);
     this.hpBarFill = this.add
       .rectangle(
-        58,
-        hpBarY,
-        this.barWidth,
-        this.barHeight,
+        hpBarX,
+        hpBarYAdjusted,
+        this.hpBarWidth,
+        hpBarHeight,
         this.theme.hpFill,
         1,
       )
-      .setOrigin(0, 0.5);
+      .setOrigin(0, 0.5)
+      .setDepth(contentDepth + 1);
     this.hpBarCap = this.add
-      .rectangle(58, hpBarY, 4, this.barHeight + 4, 0xf5ddd3, 0.9)
-      .setOrigin(0, 0.5);
-    this.hpValueText = this.add.text(304, hpBarY - 10, "", {
-      fontFamily: "Verdana",
-      fontSize: "14px",
-      color: "#fff0f0",
-      fontStyle: "bold",
-    });
+      .rectangle(hpBarX, hpBarYAdjusted, 3, hpBarHeight + 3, 0xf5ddd3, 0.9)
+      .setOrigin(0, 0.5)
+      .setDepth(contentDepth + 2);
+    this.hpValueText = this.add
+      .text(hpValueXAdjusted, hpValueY, "", {
+        fontFamily: "Verdana",
+        fontSize: "13px",
+        color: "#fff8d9",
+        fontStyle: "bold",
+        stroke: "#1a1a1a",
+        strokeThickness: 3,
+      })
+      .setOrigin(1, valueOriginY)
+      .setDepth(contentDepth + 3);
 
-    this.energyLabel = this.add.text(18, energyBarY - 10, "EN", {
-      fontFamily: "Georgia",
-      fontSize: "15px",
-      color: "#d9ecfc",
-      fontStyle: "bold",
-    });
+    this.energyLabel = this.add
+      .text(
+        labelX,
+        energyBarYAdjusted - valueOffsetY,
+        hasCommandHudTexture ? "" : "EN",
+        {
+          fontFamily: "Georgia",
+          fontSize: "14px",
+          color: "#d9ecfc",
+          fontStyle: "bold",
+        },
+      )
+      .setDepth(contentDepth);
     this.energyBarBg = this.add
       .rectangle(
-        58,
-        energyBarY,
-        this.barWidth,
-        this.barHeight,
+        energyBarXAdjusted,
+        energyBarYAdjusted,
+        this.energyBarWidth,
+        energyBarHeight,
         this.theme.enBg,
         0.95,
       )
-      .setOrigin(0, 0.5);
+      .setOrigin(0, 0.5)
+      .setDepth(contentDepth);
     this.energyBarFill = this.add
       .rectangle(
-        58,
-        energyBarY,
-        this.barWidth,
-        this.barHeight,
+        energyBarXAdjusted,
+        energyBarYAdjusted,
+        this.energyBarWidth,
+        energyBarHeight,
         this.theme.enFill,
         1,
       )
-      .setOrigin(0, 0.5);
+      .setOrigin(0, 0.5)
+      .setDepth(contentDepth + 1);
     this.energyBarCap = this.add
-      .rectangle(58, energyBarY, 4, this.barHeight + 4, 0xd6efff, 0.9)
-      .setOrigin(0, 0.5);
-    this.energyValueText = this.add.text(304, energyBarY - 10, "", {
-      fontFamily: "Verdana",
-      fontSize: "14px",
-      color: "#e8f7ff",
-      fontStyle: "bold",
-    });
+      .rectangle(
+        energyBarXAdjusted,
+        energyBarYAdjusted,
+        3,
+        energyBarHeight + 3,
+        0xd6efff,
+        0.9,
+      )
+      .setOrigin(0, 0.5)
+      .setDepth(contentDepth + 2);
+    this.energyValueText = this.add
+      .text(energyValueXAdjusted, energyValueY, "", {
+        fontFamily: "Verdana",
+        fontSize: "13px",
+        color: "#fff8d9",
+        fontStyle: "bold",
+        stroke: "#1a1a1a",
+        strokeThickness: 3,
+      })
+      .setOrigin(1, valueOriginY)
+      .setDepth(contentDepth + 3);
 
-    this.coinText = this.add.text(18, topPadding + 84, "", {
-      fontFamily: "Georgia",
-      fontSize: "42px",
-      color: this.theme.coin,
-      fontStyle: "bold",
-      stroke: "#3b2d1c",
-      strokeThickness: 3,
-    });
+    this.coinText = this.add
+      .text(
+        panelLeft + panelWidth * (hasCommandHudTexture ? 0.19 : 0.08) + 10,
+        panelTop + panelHeight * (hasCommandHudTexture ? 0.55 : 0.72),
+        "",
+        {
+          fontFamily: "Georgia",
+          fontSize: hasCommandHudTexture ? "40px" : "48px",
+          color: this.theme.coin,
+          fontStyle: "bold",
+          stroke: "#3b2d1c",
+          strokeThickness: hasCommandHudTexture ? 2 : 3,
+        },
+      )
+      .setDepth(contentDepth + 1);
   }
 
   createWaveHud(topPadding) {
     const centerX = GAME_WIDTH * 0.5;
+    const chipY = topPadding + 82;
+    this.useStaticWaveBar = this.textures.exists("ui-wave-bar");
 
-    this.waveChip = this.add
-      .rectangle(centerX, topPadding + 38, 310, 72, this.theme.waveChip, 0.4)
-      .setStrokeStyle(2, this.theme.waveChipStroke, 0.88)
-      .setOrigin(0.5);
+    if (this.useStaticWaveBar) {
+      const waveWidth = 240;
+      this.waveChip = this.add
+        .image(centerX, chipY, "ui-wave-bar")
+        .setDisplaySize(
+          waveWidth,
+          this.getImageHeightByWidth("ui-wave-bar", waveWidth),
+        )
+        .setOrigin(0.5)
+        .setDepth(10)
+        .setAlpha(0.95);
+    } else {
+      this.waveChip = this.add
+        .rectangle(centerX, topPadding + 38, 310, 72, this.theme.waveChip, 0.4)
+        .setStrokeStyle(2, this.theme.waveChipStroke, 0.88)
+        .setOrigin(0.5)
+        .setDepth(10);
+    }
+
+    this.waveChipBaseScaleX = this.waveChip.scaleX || 1;
+    this.waveChipBaseScaleY = this.waveChip.scaleY || 1;
 
     this.waveText = this.add
-      .text(centerX, topPadding + 6, "", {
+      .text(centerX, this.waveChip.y - 4, "", {
         fontFamily: "Georgia",
-        fontSize: "58px",
+        fontSize: "20px",
         color: this.theme.textBright,
         fontStyle: "bold",
         stroke: "#322b22",
         strokeThickness: 3,
       })
-      .setOrigin(0.5, 0);
+      .setOrigin(0.5)
+      .setDepth(11);
+
+    this.waveTextBaseScaleX = this.waveText.scaleX || 1;
+    this.waveTextBaseScaleY = this.waveText.scaleY || 1;
   }
 
   createTopRightSkillHud(panelY) {
@@ -1082,12 +1226,12 @@ export class UIScene extends Phaser.Scene {
 
     this.hpBarFill.width = Phaser.Math.Linear(
       this.hpBarFill.width,
-      this.barWidth * hpRatio,
+      this.hpBarWidth * hpRatio,
       0.2,
     );
     this.energyBarFill.width = Phaser.Math.Linear(
       this.energyBarFill.width,
-      this.barWidth * energyRatio,
+      this.energyBarWidth * energyRatio,
       0.2,
     );
 
@@ -1097,10 +1241,6 @@ export class UIScene extends Phaser.Scene {
     this.hpValueText.setText(`${hp} / ${maxHP}`);
     this.energyValueText.setText(`${energy} / ${maxEnergy}`);
     this.coinText.setText(`$ ${coin}`);
-
-    this.energyValueText.setColor(
-      energy < SKILL_CONFIG.energyCost ? UI_CONFIG.warningColor : "#e8f7ff",
-    );
 
     this.waveText.setText(`WAVE ${wave}`);
 
@@ -1237,6 +1377,14 @@ export class UIScene extends Phaser.Scene {
   }
 
   animateWaveText() {
+    if (this.useStaticWaveBar) {
+      this.waveChip.setScale(this.waveChipBaseScaleX, this.waveChipBaseScaleY);
+      this.waveChip.setAlpha(0.95);
+      this.waveText.setScale(this.waveTextBaseScaleX, this.waveTextBaseScaleY);
+      this.waveText.setAlpha(1);
+      return;
+    }
+
     this.waveChip.setScale(1);
     this.waveChip.setAlpha(0.4);
     this.tweens.add({

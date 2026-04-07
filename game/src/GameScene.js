@@ -219,6 +219,8 @@ export class GameScene extends Phaser.Scene {
     this.load.image("icon-upgrade-unit", "assets/object/upgrade_unit.png");
     this.load.image("button-menu-game", "assets/object/button_menu_game.png");
     this.load.image("frame-menu-game", "assets/object/frame_menu_game.png");
+    this.load.image("ui-wave-bar", "assets/object/wave.png");
+    this.load.image("ui-command-hud", "assets/object/command_hud.png");
     this.load.image(
       "skill-icon-tornado",
       "assets/object/icon_skill_loc_xoay.png",

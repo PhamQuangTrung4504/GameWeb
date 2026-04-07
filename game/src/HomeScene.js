@@ -8,6 +8,7 @@ export class HomeScene extends Phaser.Scene {
     this.guideOpen = false;
     this.mainButtonWidth = 500;
     this.overlayMode = null;
+    this.difficultyButtonMap = {};
   }
 
   preload() {
@@ -101,18 +102,51 @@ export class HomeScene extends Phaser.Scene {
         GAME_WIDTH,
         GAME_HEIGHT,
         0,
-        0.46,
+        0.58,
       )
       .setDepth(10)
       .setVisible(false)
       .setInteractive({ useHandCursor: true })
       .on("pointerdown", () => this.hideOverlay());
 
+    const overlayWidth = Phaser.Math.Clamp(GAME_WIDTH * 0.48, 700, 900);
+    const overlayHeight = this.getImageHeightByWidth(
+      "menu-frame",
+      overlayWidth,
+    );
+
     this.overlayFrame = this.add
-      .image(GAME_WIDTH / 2, diffY + 12, "menu-frame")
-      .setDisplaySize(560, this.getImageHeightByWidth("menu-frame", 560) * 0.72)
+      .image(GAME_WIDTH / 2, GAME_HEIGHT * 0.5, "menu-frame")
+      .setDisplaySize(overlayWidth, overlayHeight)
       .setDepth(11)
       .setVisible(false);
+
+    this.overlayCloseBtn = this.add
+      .text(
+        this.overlayFrame.x + this.overlayFrame.displayWidth * 0.34,
+        this.overlayFrame.y - this.overlayFrame.displayHeight * 0.35,
+        "X",
+        {
+          fontFamily: "Verdana",
+          fontSize: "26px",
+          color: "#fff5dc",
+          fontStyle: "bold",
+          stroke: "#2b1a0d",
+          strokeThickness: 6,
+          backgroundColor: "rgba(65,38,21,0.45)",
+          padding: { x: 10, y: 0 },
+        },
+      )
+      .setOrigin(0.5)
+      .setDepth(13)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", (pointer, localX, localY, event) => {
+        event?.stopPropagation?.();
+        this.hideOverlay();
+      })
+      .on("pointerover", () => this.overlayCloseBtn.setScale(1.08))
+      .on("pointerout", () => this.overlayCloseBtn.setScale(1));
 
     this.createDifficultyOverlayItems();
     this.createGuideOverlayItems();
@@ -120,6 +154,10 @@ export class HomeScene extends Phaser.Scene {
     this.overlayFrame.on("pointerdown", (pointer, localX, localY, event) => {
       event?.stopPropagation?.();
     });
+
+    this.input.keyboard?.on("keydown-ESC", () => this.hideOverlay());
+
+    this.updateDifficultyVisuals();
   }
 
   getImageHeightByWidth(textureKey, targetWidth) {
@@ -134,20 +172,38 @@ export class HomeScene extends Phaser.Scene {
   createDifficultyOverlayItems() {
     const frameWidth = this.overlayFrame.displayWidth;
     const frameHeight = this.overlayFrame.displayHeight;
-    const leftX = this.overlayFrame.x - frameWidth * 0.18;
-    const rightX = this.overlayFrame.x + frameWidth * 0.18;
-    const headerY = this.overlayFrame.y - frameHeight * 0.28;
-    const topY = this.overlayFrame.y + frameHeight * 0.02;
-    const bottomY = this.overlayFrame.y + frameHeight * 0.26;
-    const difficultyButtonWidth = frameWidth * 0.28;
+    const contentTop = this.overlayFrame.y - frameHeight * 0.18;
+    const contentBottom = this.overlayFrame.y + frameHeight * 0.32;
+    const contentHeight = contentBottom - contentTop;
+    const leftX = this.overlayFrame.x - frameWidth * 0.165;
+    const rightX = this.overlayFrame.x + frameWidth * 0.165;
+    const headerY = this.overlayFrame.y - frameHeight * 0.355;
+    const hintY = this.overlayFrame.y - frameHeight * 0.22;
+    const topY = contentTop + contentHeight * 0.38;
+    const bottomY = contentTop + contentHeight * 0.82;
+    const footerY = contentBottom + frameHeight * 0.045;
+    const difficultyButtonWidth = frameWidth * 0.205;
 
-    const headerWidth = frameWidth * 0.5;
+    const headerWidth = frameWidth * 0.46;
     this.diffHeaderBtn = this.add
       .image(this.overlayFrame.x, headerY, "btn-difficulty")
       .setDisplaySize(
         headerWidth,
         this.getImageHeightByWidth("btn-difficulty", headerWidth),
       )
+      .setDepth(12)
+      .setVisible(false);
+
+    this.diffHintText = this.add
+      .text(this.overlayFrame.x, hintY, "Chọn thử thách phù hợp với bạn", {
+        fontFamily: "Verdana",
+        fontSize: "18px",
+        color: "#5b3e2b",
+        fontStyle: "bold",
+        stroke: "#f5ead1",
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5)
       .setDepth(12)
       .setVisible(false);
 
@@ -158,12 +214,10 @@ export class HomeScene extends Phaser.Scene {
         this.getImageHeightByWidth("btn-easy-level", difficultyButtonWidth),
       )
       .setDepth(12)
-      .setVisible(false)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerdown", (pointer, localX, localY, event) => {
-        event?.stopPropagation?.();
-        this.applyDifficulty("easy");
-      });
+      .setVisible(false);
+    this.registerOverlayButton(this.easyLevelBtn, () => {
+      this.applyDifficulty("easy");
+    });
 
     this.normalLevelBtn = this.add
       .image(rightX, topY, "btn-normal-level")
@@ -172,12 +226,10 @@ export class HomeScene extends Phaser.Scene {
         this.getImageHeightByWidth("btn-normal-level", difficultyButtonWidth),
       )
       .setDepth(12)
-      .setVisible(false)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerdown", (pointer, localX, localY, event) => {
-        event?.stopPropagation?.();
-        this.applyDifficulty("medium");
-      });
+      .setVisible(false);
+    this.registerOverlayButton(this.normalLevelBtn, () => {
+      this.applyDifficulty("medium");
+    });
 
     this.hardLevelBtn = this.add
       .image(leftX, bottomY, "btn-hard-level")
@@ -186,12 +238,10 @@ export class HomeScene extends Phaser.Scene {
         this.getImageHeightByWidth("btn-hard-level", difficultyButtonWidth),
       )
       .setDepth(12)
-      .setVisible(false)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerdown", (pointer, localX, localY, event) => {
-        event?.stopPropagation?.();
-        this.applyDifficulty("hard");
-      });
+      .setVisible(false);
+    this.registerOverlayButton(this.hardLevelBtn, () => {
+      this.applyDifficulty("hard");
+    });
 
     this.hellLevelBtn = this.add
       .image(rightX, bottomY, "btn-hell-level")
@@ -200,19 +250,48 @@ export class HomeScene extends Phaser.Scene {
         this.getImageHeightByWidth("btn-hell-level", difficultyButtonWidth),
       )
       .setDepth(12)
-      .setVisible(false)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerdown", (pointer, localX, localY, event) => {
-        event?.stopPropagation?.();
-        this.applyDifficulty("hell");
-      });
+      .setVisible(false);
+    this.registerOverlayButton(this.hellLevelBtn, () => {
+      this.applyDifficulty("hell");
+    });
+
+    this.difficultyButtonMap = {
+      easy: this.easyLevelBtn,
+      medium: this.normalLevelBtn,
+      hard: this.hardLevelBtn,
+      hell: this.hellLevelBtn,
+    };
+
+    this.diffSelectionFrame = this.add
+      .rectangle(0, 0, 10, 10)
+      .setStrokeStyle(4, 0xf6e9a8, 0.95)
+      .setDepth(11.8)
+      .setVisible(false);
+
+    this.diffSelectedText = this.add
+      .text(this.overlayFrame.x, footerY, "", {
+        fontFamily: "Verdana",
+        fontSize: "17px",
+        color: "#3f2d1d",
+        fontStyle: "bold",
+        stroke: "#f5ead4",
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5)
+      .setDepth(12)
+      .setVisible(false);
   }
 
   createGuideOverlayItems() {
     const frameWidth = this.overlayFrame.displayWidth;
     const frameHeight = this.overlayFrame.displayHeight;
-    const headerY = this.overlayFrame.y - frameHeight * 0.28;
+    const contentTop = this.overlayFrame.y - frameHeight * 0.18;
+    const contentBottom = this.overlayFrame.y + frameHeight * 0.32;
+    const headerY = this.overlayFrame.y - frameHeight * 0.355;
     const headerWidth = frameWidth * 0.48;
+    const guideBoardWidth = frameWidth * 0.63;
+    const guideBoardHeight = frameHeight * 0.54;
+    const guideBoardY = this.overlayFrame.y + frameHeight * 0.03;
 
     this.guideHeaderBtn = this.add
       .image(this.overlayFrame.x, headerY, "btn-guide")
@@ -223,34 +302,51 @@ export class HomeScene extends Phaser.Scene {
       .setDepth(12)
       .setVisible(false);
 
-    this.guideText = this.add
-      .text(
+    this.guideTextBoard = this.add
+      .rectangle(
         this.overlayFrame.x,
-        this.overlayFrame.y + 10,
-        this.getGuideText(),
-        {
-          fontFamily: "Verdana",
-          fontSize: "15px",
-          color: "#e9f0ff",
-          align: "left",
-          wordWrap: { width: frameWidth * 0.76 },
-          lineSpacing: 2,
-        },
+        guideBoardY,
+        guideBoardWidth,
+        guideBoardHeight,
+        0xf8eccf,
+        0.35,
       )
-      .setOrigin(0.5)
+      .setStrokeStyle(2, 0x8f6b45, 0.6)
+      .setDepth(11.6)
+      .setVisible(false);
+
+    const guideTextX = this.guideTextBoard.x - guideBoardWidth * 0.455;
+    const guideTextY = this.guideTextBoard.y - guideBoardHeight * 0.47;
+    this.guideText = this.add
+      .text(guideTextX, guideTextY, this.getGuideText(), {
+        fontFamily: "Verdana",
+        fontSize: "17px",
+        color: "#412b19",
+        fontStyle: "bold",
+        align: "left",
+        wordWrap: { width: guideBoardWidth * 0.9 },
+        lineSpacing: 4,
+        stroke: "#fff7e5",
+        strokeThickness: 2,
+      })
+      .setOrigin(0, 0)
       .setDepth(12)
       .setVisible(false);
+
+    this.fitGuideTextToBoard(guideBoardWidth * 0.9, guideBoardHeight * 0.86);
 
     this.guideCloseText = this.add
       .text(
         this.overlayFrame.x,
-        this.overlayFrame.y + frameHeight * 0.43,
-        "Bấm ra ngoài để đóng",
+        this.overlayFrame.y + frameHeight * 0.335,
+        "Nhấn ESC hoặc bấm ra ngoài để đóng",
         {
           fontFamily: "Verdana",
-          fontSize: "14px",
-          color: "#8de8a0",
+          fontSize: "15px",
+          color: "#95f5b1",
           fontStyle: "bold",
+          stroke: "#2b1a0d",
+          strokeThickness: 4,
         },
       )
       .setOrigin(0.5)
@@ -258,35 +354,53 @@ export class HomeScene extends Phaser.Scene {
       .setVisible(false);
   }
 
-  showDifficultyMenu() {
-    this.overlayMode = "difficulty";
-    this.overlayBackdrop.setVisible(true);
-    this.overlayFrame.setVisible(true);
-    this.diffHeaderBtn.setVisible(true);
-    this.easyLevelBtn.setVisible(true);
-    this.normalLevelBtn.setVisible(true);
-    this.hardLevelBtn.setVisible(true);
-    this.hellLevelBtn.setVisible(true);
-    this.guideHeaderBtn.setVisible(false);
-    this.guideText.setVisible(false);
-    this.guideCloseText.setVisible(false);
-    this.difficultyMenuOpen = true;
-    this.guideOpen = false;
+  registerOverlayButton(button, onClick) {
+    const baseScaleX = button.scaleX;
+    const baseScaleY = button.scaleY;
+
+    button.setData("baseScaleX", baseScaleX);
+    button.setData("baseScaleY", baseScaleY);
+
+    button
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", (pointer, localX, localY, event) => {
+        event?.stopPropagation?.();
+        onClick();
+      })
+      .on("pointerover", () =>
+        button.setScale(baseScaleX * 1.05, baseScaleY * 1.05),
+      )
+      .on("pointerout", () => button.setScale(baseScaleX, baseScaleY));
   }
 
-  hideDifficultyMenu() {
-    this.overlayBackdrop.setVisible(false);
-    this.overlayFrame.setVisible(false);
-    this.diffHeaderBtn.setVisible(false);
-    this.easyLevelBtn.setVisible(false);
-    this.normalLevelBtn.setVisible(false);
-    this.hardLevelBtn.setVisible(false);
-    this.hellLevelBtn.setVisible(false);
-    this.overlayMode = null;
-    this.difficultyMenuOpen = false;
+  resetDifficultyButtonScales() {
+    Object.values(this.difficultyButtonMap).forEach((button) => {
+      const baseScaleX = button.getData("baseScaleX");
+      const baseScaleY = button.getData("baseScaleY");
+      if (typeof baseScaleX === "number" && typeof baseScaleY === "number") {
+        button.setScale(baseScaleX, baseScaleY);
+      }
+    });
   }
 
-  applyDifficulty(levelKey) {
+  fitGuideTextToBoard(maxWidth, maxHeight) {
+    let fontSize = 17;
+    let lineSpacing = 4;
+    const minFontSize = 12;
+
+    this.guideText.setWordWrapWidth(maxWidth, true);
+    this.guideText.setFontSize(fontSize);
+    this.guideText.setLineSpacing(lineSpacing);
+
+    while (this.guideText.height > maxHeight && fontSize > minFontSize) {
+      fontSize -= 1;
+      lineSpacing = Math.max(1, lineSpacing - 1);
+      this.guideText.setFontSize(fontSize);
+      this.guideText.setLineSpacing(lineSpacing);
+    }
+  }
+
+  getDifficultyLabel(levelKey) {
     const labelMap = {
       easy: "Dễ",
       medium: "Trung bình",
@@ -294,10 +408,70 @@ export class HomeScene extends Phaser.Scene {
       hell: "Địa ngục",
     };
 
+    return labelMap[levelKey] ?? "Dễ";
+  }
+
+  updateDifficultyVisuals() {
+    const selectedLabel = this.getDifficultyLabel(this.selectedDifficulty);
+    this.selectedDifficultyText?.setText(`Đang chọn: ${selectedLabel}`);
+    this.diffSelectedText?.setText(`Độ khó hiện tại: ${selectedLabel}`);
+
+    const selectedButton = this.difficultyButtonMap[this.selectedDifficulty];
+    if (!selectedButton || !this.diffSelectionFrame) {
+      return;
+    }
+
+    this.diffSelectionFrame
+      .setPosition(selectedButton.x, selectedButton.y)
+      .setSize(
+        selectedButton.displayWidth + 16,
+        selectedButton.displayHeight + 14,
+      )
+      .setVisible(this.overlayMode === "difficulty");
+  }
+
+  showDifficultyMenu() {
+    this.resetDifficultyButtonScales();
+    this.overlayMode = "difficulty";
+    this.overlayBackdrop.setVisible(true);
+    this.overlayFrame.setVisible(true);
+    this.overlayCloseBtn.setVisible(true);
+    this.diffHeaderBtn.setVisible(true);
+    this.diffHintText.setVisible(true);
+    this.easyLevelBtn.setVisible(true);
+    this.normalLevelBtn.setVisible(true);
+    this.hardLevelBtn.setVisible(true);
+    this.hellLevelBtn.setVisible(true);
+    this.diffSelectedText.setVisible(true);
+    this.guideHeaderBtn.setVisible(false);
+    this.guideTextBoard.setVisible(false);
+    this.guideText.setVisible(false);
+    this.guideCloseText.setVisible(false);
+    this.updateDifficultyVisuals();
+    this.difficultyMenuOpen = true;
+    this.guideOpen = false;
+  }
+
+  hideDifficultyMenu() {
+    this.resetDifficultyButtonScales();
+    this.overlayBackdrop.setVisible(false);
+    this.overlayFrame.setVisible(false);
+    this.overlayCloseBtn.setVisible(false);
+    this.diffHeaderBtn.setVisible(false);
+    this.diffHintText.setVisible(false);
+    this.easyLevelBtn.setVisible(false);
+    this.normalLevelBtn.setVisible(false);
+    this.hardLevelBtn.setVisible(false);
+    this.hellLevelBtn.setVisible(false);
+    this.diffSelectedText.setVisible(false);
+    this.diffSelectionFrame.setVisible(false);
+    this.overlayMode = null;
+    this.difficultyMenuOpen = false;
+  }
+
+  applyDifficulty(levelKey) {
     this.selectedDifficulty = levelKey;
-    this.selectedDifficultyText.setText(
-      `Đang chọn: ${labelMap[levelKey] ?? "Dễ"}`,
-    );
+    this.updateDifficultyVisuals();
     this.hideDifficultyMenu();
   }
 
@@ -305,12 +479,17 @@ export class HomeScene extends Phaser.Scene {
     this.overlayMode = "guide";
     this.overlayBackdrop.setVisible(true);
     this.overlayFrame.setVisible(true);
+    this.overlayCloseBtn.setVisible(true);
     this.diffHeaderBtn.setVisible(false);
+    this.diffHintText.setVisible(false);
     this.easyLevelBtn.setVisible(false);
     this.normalLevelBtn.setVisible(false);
     this.hardLevelBtn.setVisible(false);
     this.hellLevelBtn.setVisible(false);
+    this.diffSelectedText.setVisible(false);
+    this.diffSelectionFrame.setVisible(false);
     this.guideHeaderBtn.setVisible(true);
+    this.guideTextBoard.setVisible(true);
     this.guideText.setVisible(true);
     this.guideCloseText.setVisible(true);
     this.guideOpen = true;
@@ -320,7 +499,9 @@ export class HomeScene extends Phaser.Scene {
   hideGuidePanel() {
     this.overlayBackdrop.setVisible(false);
     this.overlayFrame.setVisible(false);
+    this.overlayCloseBtn.setVisible(false);
     this.guideHeaderBtn.setVisible(false);
+    this.guideTextBoard.setVisible(false);
     this.guideText.setVisible(false);
     this.guideCloseText.setVisible(false);
     this.overlayMode = null;
@@ -340,6 +521,20 @@ export class HomeScene extends Phaser.Scene {
 
     this.overlayBackdrop.setVisible(false);
     this.overlayFrame.setVisible(false);
+    this.overlayCloseBtn.setVisible(false);
+    this.diffHeaderBtn.setVisible(false);
+    this.diffHintText.setVisible(false);
+    this.easyLevelBtn.setVisible(false);
+    this.normalLevelBtn.setVisible(false);
+    this.hardLevelBtn.setVisible(false);
+    this.hellLevelBtn.setVisible(false);
+    this.diffSelectedText.setVisible(false);
+    this.diffSelectionFrame.setVisible(false);
+    this.guideHeaderBtn.setVisible(false);
+    this.guideTextBoard.setVisible(false);
+    this.guideText.setVisible(false);
+    this.guideCloseText.setVisible(false);
+    this.overlayMode = null;
   }
 
   getGuideText() {
