@@ -3,6 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (() => {
+        const path = window.location.pathname;
+        const tail = path.split("/").pop() || "";
+        if (!path.endsWith("/") && !tail.includes(".")) {
+          const target =
+            path + "/" + window.location.search + window.location.hash;
+          window.location.replace(target);
+        }
+      })();
+    </script>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link
       rel="preload"
@@ -110,6 +121,17 @@
         height: auto;
         image-rendering: pixelated;
         filter: drop-shadow(0 5px 14px rgba(0, 0, 0, 0.42));
+      }
+
+      .loading-error {
+        margin: 6px 0 0;
+        max-width: min(86vw, 640px);
+        color: #ffe9bf;
+        font-family: Verdana, "Trebuchet MS", sans-serif;
+        font-size: clamp(13px, 1.5vw, 16px);
+        font-weight: 700;
+        text-align: center;
+        text-shadow: 0 2px 6px rgba(0, 0, 0, 0.42);
       }
 
       @keyframes loading-spin {
@@ -247,7 +269,66 @@
       })();
     </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
-    <script type="module" src="./main.js"></script>
+    <script type="module">
+      const loadingPanel = document.querySelector(".loading-panel");
+
+      const showLoadingError = (message) => {
+        if (!loadingPanel) {
+          return;
+        }
+
+        const oldNode = loadingPanel.querySelector(".loading-error");
+        if (oldNode) {
+          oldNode.remove();
+        }
+
+        const node = document.createElement("p");
+        node.className = "loading-error";
+        node.textContent = message;
+        loadingPanel.appendChild(node);
+      };
+
+      const loadScript = (src) =>
+        new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = src;
+          script.async = true;
+          script.onload = () => resolve(src);
+          script.onerror = () => reject(new Error(`Failed to load ${src}`));
+          document.head.appendChild(script);
+        });
+
+      const phaserCdnCandidates = [
+        "https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js",
+        "https://unpkg.com/phaser@3.90.0/dist/phaser.min.js",
+        "https://cdnjs.cloudflare.com/ajax/libs/phaser/3.90.0/phaser.min.js",
+      ];
+
+      let phaserLoaded = false;
+      for (const cdn of phaserCdnCandidates) {
+        try {
+          await loadScript(cdn);
+          phaserLoaded = typeof window.Phaser !== "undefined";
+          if (phaserLoaded) {
+            break;
+          }
+        } catch {
+          // Try the next CDN source.
+        }
+      }
+
+      if (!phaserLoaded) {
+        showLoadingError(
+          "Khong the tai thu vien game. Vui long kiem tra mang va thu lai.",
+        );
+      } else {
+        try {
+          await import("./main.js");
+        } catch (error) {
+          console.error("Failed to bootstrap game:", error);
+          showLoadingError("Co loi khi khoi tao game. Vui long tai lai trang.");
+        }
+      }
+    </script>
   </body>
 </html>
