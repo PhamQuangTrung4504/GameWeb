@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <script>
       (() => {
         const path = window.location.pathname;
@@ -12,6 +15,62 @@
             path + "/" + window.location.search + window.location.hash;
           window.location.replace(target);
         }
+      })();
+    </script>
+    <script>
+      (() => {
+        const mobileUA =
+          /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+        const isMobileBrowser = mobileUA.test(navigator.userAgent || "");
+
+        const applyMobileLayout = () => {
+          if (!document.body) {
+            return;
+          }
+
+          document.body.classList.toggle("is-mobile-browser", isMobileBrowser);
+
+          if (!isMobileBrowser) {
+            document.body.classList.remove("mobile-force-landscape");
+            return;
+          }
+
+          const isPortrait =
+            window.matchMedia?.("(orientation: portrait)")?.matches ??
+            window.innerHeight > window.innerWidth;
+          document.body.classList.toggle("mobile-force-landscape", isPortrait);
+        };
+
+        const tryLockLandscape = async () => {
+          if (!isMobileBrowser || !screen.orientation?.lock) {
+            return;
+          }
+
+          try {
+            await screen.orientation.lock("landscape");
+          } catch {
+            // Orientation lock may be blocked without fullscreen/gesture.
+          }
+        };
+
+        window.addEventListener("DOMContentLoaded", () => {
+          applyMobileLayout();
+
+          const gestureHandler = () => {
+            tryLockLandscape();
+          };
+
+          window.addEventListener("pointerdown", gestureHandler, { once: true });
+          window.addEventListener("touchstart", gestureHandler, {
+            once: true,
+            passive: true,
+          });
+        });
+
+        window.addEventListener("resize", applyMobileLayout, { passive: true });
+        window.addEventListener("orientationchange", applyMobileLayout, {
+          passive: true,
+        });
       })();
     </script>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
@@ -63,6 +122,11 @@
         overflow: hidden;
       }
 
+      body.is-mobile-browser {
+        overscroll-behavior: none;
+        touch-action: manipulation;
+      }
+
       #loading-screen {
         position: fixed;
         inset: 0;
@@ -83,6 +147,19 @@
         transition:
           opacity 0.42s ease,
           visibility 0.42s ease;
+      }
+
+      body.is-mobile-browser.mobile-force-landscape #loading-screen,
+      body.is-mobile-browser.mobile-force-landscape #game-root {
+        inset: auto;
+        top: 50%;
+        left: 50%;
+        width: 100dvh;
+        height: 100dvw;
+        max-width: 100dvh;
+        max-height: 100dvw;
+        transform: translate(-50%, -50%) rotate(90deg);
+        transform-origin: center center;
       }
 
       #loading-screen.is-hidden {
