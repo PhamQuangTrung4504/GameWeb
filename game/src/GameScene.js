@@ -130,48 +130,48 @@ export class GameScene extends Phaser.Scene {
       "enemy-zombie1",
       "assets/enemy/zombie1_di_chuyen.png",
       {
-        frameWidth: 48,
-        frameHeight: 48,
+        frameWidth: 198,
+        frameHeight: 247,
       },
     );
     this.load.spritesheet(
       "enemy-zombie1-attack-sheet",
       "assets/enemy/zombie1_attack.png",
       {
-        frameWidth: 48,
-        frameHeight: 48,
+        frameWidth: 196,
+        frameHeight: 271,
       },
     );
     this.load.spritesheet(
       "enemy-zombie2",
       "assets/enemy/zombie2_di_chuyen.png",
       {
-        frameWidth: 48,
-        frameHeight: 48,
+        frameWidth: 195,
+        frameHeight: 252,
       },
     );
     this.load.spritesheet(
       "enemy-zombie2-attack-sheet",
       "assets/enemy/zombie2_attack.png",
       {
-        frameWidth: 48,
-        frameHeight: 48,
+        frameWidth: 196,
+        frameHeight: 261,
       },
     );
     this.load.spritesheet(
       "enemy-zombie3",
       "assets/enemy/zombie3_di_chuyen.png",
       {
-        frameWidth: 48,
-        frameHeight: 48,
+        frameWidth: 196,
+        frameHeight: 234,
       },
     );
     this.load.spritesheet(
       "enemy-zombie3-attack-sheet",
       "assets/enemy/zombie3_attack.png",
       {
-        frameWidth: 48,
-        frameHeight: 48,
+        frameWidth: 197,
+        frameHeight: 255,
       },
     );
     this.load.spritesheet(
@@ -1643,7 +1643,7 @@ export class GameScene extends Phaser.Scene {
     ensureAnim("enemy-zombie1-move", {
       frames: this.anims.generateFrameNumbers("enemy-zombie1", {
         start: 0,
-        end: 1,
+        end: 5,
       }),
       frameRate: 6,
       repeat: -1,
@@ -1651,7 +1651,7 @@ export class GameScene extends Phaser.Scene {
     ensureAnim("enemy-zombie1-attack", {
       frames: this.anims.generateFrameNumbers("enemy-zombie1-attack-sheet", {
         start: 0,
-        end: 1,
+        end: 4,
       }),
       frameRate: 9,
       repeat: 0,
@@ -1661,7 +1661,7 @@ export class GameScene extends Phaser.Scene {
     ensureAnim("enemy-zombie2-move", {
       frames: this.anims.generateFrameNumbers("enemy-zombie2", {
         start: 0,
-        end: 1,
+        end: 5,
       }),
       frameRate: 5,
       repeat: -1,
@@ -1669,7 +1669,7 @@ export class GameScene extends Phaser.Scene {
     ensureAnim("enemy-zombie2-attack", {
       frames: this.anims.generateFrameNumbers("enemy-zombie2-attack-sheet", {
         start: 0,
-        end: 1,
+        end: 4,
       }),
       frameRate: 8,
       repeat: 0,
@@ -1679,7 +1679,7 @@ export class GameScene extends Phaser.Scene {
     ensureAnim("enemy-zombie3-move", {
       frames: this.anims.generateFrameNumbers("enemy-zombie3", {
         start: 0,
-        end: 1,
+        end: 5,
       }),
       frameRate: 8,
       repeat: -1,
@@ -1687,7 +1687,7 @@ export class GameScene extends Phaser.Scene {
     ensureAnim("enemy-zombie3-attack", {
       frames: this.anims.generateFrameNumbers("enemy-zombie3-attack-sheet", {
         start: 0,
-        end: 1,
+        end: 4,
       }),
       frameRate: 10,
       repeat: 0,
