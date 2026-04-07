@@ -9,10 +9,13 @@ export class HomeScene extends Phaser.Scene {
     this.mainButtonWidth = 500;
     this.overlayMode = null;
     this.difficultyButtonMap = {};
+    this.logoTipOpen = false;
   }
 
   preload() {
     this.load.image("home-bg", "assets/dashboard/background.jpg");
+    this.load.image("home-logo", "assets/logo/logogame1.png");
+    this.load.image("logo-tip", "assets/logo/tip1.png");
     this.load.image("btn-play", "assets/dashboard/button_play.png");
     this.load.image(
       "btn-difficulty",
@@ -33,6 +36,25 @@ export class HomeScene extends Phaser.Scene {
     this.add
       .image(GAME_WIDTH / 2, GAME_HEIGHT / 2, "home-bg")
       .setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+
+    const logoSizeBoost = 4 / 3;
+    const logoWidth = Phaser.Math.Clamp(
+      GAME_WIDTH * 0.34 * logoSizeBoost,
+      280,
+      575,
+    );
+    const logoHeight = this.getImageHeightByWidth("home-logo", logoWidth);
+    const maxLogoHeight = GAME_HEIGHT * 0.24 * logoSizeBoost;
+    const logoScale =
+      logoHeight > 0 ? Math.min(1, maxLogoHeight / logoHeight) : 1;
+    const finalLogoWidth = logoWidth * logoScale;
+    const finalLogoHeight = logoHeight * logoScale;
+
+    this.homeLogo = this.add
+      .image(20, 18, "home-logo")
+      .setOrigin(0, 0)
+      .setDisplaySize(finalLogoWidth, finalLogoHeight)
+      .setDepth(6);
 
     const centerY = GAME_HEIGHT / 2;
     this.mainButtonWidth = Math.min(375, Math.max(270, GAME_WIDTH * 0.214));
@@ -158,7 +180,16 @@ export class HomeScene extends Phaser.Scene {
       event?.stopPropagation?.();
     });
 
-    this.input.keyboard?.on("keydown-ESC", () => this.hideOverlay());
+    this.createLogoTipOverlay();
+    this.registerHomeLogoInteractions();
+
+    this.input.keyboard?.on("keydown-ESC", () => {
+      if (this.logoTipOpen) {
+        this.hideLogoTip();
+        return;
+      }
+      this.hideOverlay();
+    });
 
     this.updateDifficultyVisuals();
   }
@@ -181,6 +212,104 @@ export class HomeScene extends Phaser.Scene {
         button.setScale(baseScaleX * 1.05, baseScaleY * 1.05),
       )
       .on("pointerout", () => button.setScale(baseScaleX, baseScaleY));
+  }
+
+  registerHomeLogoInteractions() {
+    if (!this.homeLogo) {
+      return;
+    }
+
+    const baseScaleX = this.homeLogo.scaleX;
+    const baseScaleY = this.homeLogo.scaleY;
+
+    this.homeLogo
+      .setData("baseScaleX", baseScaleX)
+      .setData("baseScaleY", baseScaleY)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerover", () => {
+        if (this.logoTipOpen) {
+          return;
+        }
+        this.homeLogo.setScale(baseScaleX * 1.08, baseScaleY * 1.08);
+      })
+      .on("pointerout", () => {
+        if (this.logoTipOpen) {
+          return;
+        }
+        this.homeLogo.setScale(baseScaleX, baseScaleY);
+      })
+      .on("pointerdown", (pointer, localX, localY, event) => {
+        event?.stopPropagation?.();
+        this.showLogoTip();
+      });
+  }
+
+  createLogoTipOverlay() {
+    this.logoTipBackdrop = this.add
+      .rectangle(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT / 2,
+        GAME_WIDTH,
+        GAME_HEIGHT,
+        0,
+        0.55,
+      )
+      .setDepth(30)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", () => this.hideLogoTip());
+
+    const tipWidth = Phaser.Math.Clamp(GAME_WIDTH * 0.68, 420, 980);
+    const tipHeight = this.getImageHeightByWidth("logo-tip", tipWidth);
+    const maxTipHeight = GAME_HEIGHT * 0.85;
+    const tipScale = tipHeight > 0 ? Math.min(1, maxTipHeight / tipHeight) : 1;
+
+    this.logoTipImage = this.add
+      .image(GAME_WIDTH / 2, GAME_HEIGHT / 2, "logo-tip")
+      .setDisplaySize(tipWidth * tipScale, tipHeight * tipScale)
+      .setDepth(31)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", (pointer, localX, localY, event) => {
+        event?.stopPropagation?.();
+        this.hideLogoTip();
+      });
+  }
+
+  showLogoTip() {
+    if (this.logoTipOpen) {
+      return;
+    }
+
+    this.logoTipOpen = true;
+    this.logoTipBackdrop?.setVisible(true);
+    this.logoTipImage?.setVisible(true);
+
+    const baseScaleX =
+      this.homeLogo?.getData("baseScaleX") ?? this.homeLogo?.scaleX;
+    const baseScaleY =
+      this.homeLogo?.getData("baseScaleY") ?? this.homeLogo?.scaleY;
+    if (typeof baseScaleX === "number" && typeof baseScaleY === "number") {
+      this.homeLogo?.setScale(baseScaleX, baseScaleY);
+    }
+  }
+
+  hideLogoTip() {
+    if (!this.logoTipOpen) {
+      return;
+    }
+
+    this.logoTipOpen = false;
+    this.logoTipBackdrop?.setVisible(false);
+    this.logoTipImage?.setVisible(false);
+
+    const baseScaleX =
+      this.homeLogo?.getData("baseScaleX") ?? this.homeLogo?.scaleX;
+    const baseScaleY =
+      this.homeLogo?.getData("baseScaleY") ?? this.homeLogo?.scaleY;
+    if (typeof baseScaleX === "number" && typeof baseScaleY === "number") {
+      this.homeLogo?.setScale(baseScaleX, baseScaleY);
+    }
   }
 
   createDifficultyOverlayItems() {
@@ -554,10 +683,10 @@ export class HomeScene extends Phaser.Scene {
   getGuideText() {
     return (
       "1. Bảo vệ nhà chính trước các đợt zombie.\n\n" +
-      "2. Nhấn PLAY để bắt đầu trận đấu.\n\n" +
+      "2. Nhấn chơi ngay để bắt đầu trận đấu.\n\n" +
       "3. Chọn độ khó tại nút Độ khó: Dễ, Trung bình, Khó, Địa ngục.\n\n" +
-      "4. Trong trận đấu: đặt quân lính, dùng kỹ năng và nâng cấp hợp lý.\n\n" +
-      "5. Mở Setting để chỉnh tốc độ, toàn màn hoặc thoát về Home."
+      "4. Trong trận đấu: đặt quân lính, nâng cấp lính và dùng kỹ năng bổ trợ.\n\n" +
+      "5. Mở Menu trong game để chỉnh tốc độ gameplay, chơi lại hoặc thoát về Home."
     );
   }
 }
