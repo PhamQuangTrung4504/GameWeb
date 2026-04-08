@@ -43,8 +43,10 @@ const patchRotatedPointerInput = () => {
     const normalizedX = clamp01((pageX - bounds.left) / width);
     const normalizedY = clamp01((pageY - bounds.top) / height);
 
-    const mappedPageX = bounds.left + (1 - normalizedY) * width;
-    const mappedPageY = bounds.top + normalizedX * height;
+    // #game-root uses rotate(90deg), so remap touch from portrait screen
+    // back into the unrotated landscape canvas coordinate system.
+    const mappedPageX = bounds.left + normalizedY * width;
+    const mappedPageY = bounds.top + (1 - normalizedX) * height;
 
     return originalTransformPointer(pointer, mappedPageX, mappedPageY, wasMove);
   };

@@ -61,32 +61,8 @@
           document.body.classList.toggle("mobile-force-landscape", isPortrait);
         };
 
-        const tryLockLandscape = async () => {
-          if (!isMobileBrowser || !screen.orientation?.lock) {
-            return;
-          }
-
-          try {
-            await screen.orientation.lock("landscape");
-          } catch {
-            // Orientation lock may be blocked without fullscreen/gesture.
-          }
-        };
-
         window.addEventListener("DOMContentLoaded", () => {
           applyMobileLayout();
-
-          const gestureHandler = () => {
-            tryLockLandscape();
-          };
-
-          window.addEventListener("pointerdown", gestureHandler, {
-            once: true,
-          });
-          window.addEventListener("touchstart", gestureHandler, {
-            once: true,
-            passive: true,
-          });
         });
 
         window.addEventListener("resize", applyMobileLayout, { passive: true });

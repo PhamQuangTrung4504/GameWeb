@@ -208,7 +208,7 @@ export class HomeScene extends Phaser.Scene {
     this.updateDifficultyVisuals();
 
     if (typeof window !== "undefined" && window.hideGameLoading) {
-      window.hideGameLoading();
+      window.hideGameLoading(true);
     }
   }
 
