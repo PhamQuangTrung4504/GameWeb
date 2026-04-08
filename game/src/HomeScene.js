@@ -34,6 +34,8 @@ export class HomeScene extends Phaser.Scene {
   }
 
   create() {
+    this.isStartingGame = false;
+
     this.add
       .image(GAME_WIDTH / 2, GAME_HEIGHT / 2, "home-bg")
       .setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
