@@ -219,6 +219,19 @@ export class GameScene extends Phaser.Scene {
     this.load.image("ui-wave-bar", "assets/object/wave.png");
     this.load.image("ui-command-hud", "assets/object/command_hud.png");
     this.load.image(
+      "ui-speed-slider-track",
+      "assets/object/thanh_keo_speed.png",
+    );
+    this.load.image(
+      "ui-speed-slider-knob",
+      "assets/object/button_keo_speed.png",
+    );
+    this.load.image(
+      "menu-button-play-again",
+      "assets/object/button_play_again.png",
+    );
+    this.load.image("menu-button-exit", "assets/object/button_exit.png");
+    this.load.image(
       "skill-icon-tornado",
       "assets/object/icon_skill_loc_xoay.png",
     );

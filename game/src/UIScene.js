@@ -230,8 +230,8 @@ export class UIScene extends Phaser.Scene {
     const speedSubtitleY = panelTopY + Math.round(panelHeight * 0.33);
     const sliderY = panelTopY + Math.round(panelHeight * 0.44);
     const valueY = panelTopY + Math.round(panelHeight * 0.52);
-    const actionRowY = panelTopY + Math.round(panelHeight * 0.72) - 20;
-    const actionGap = Math.round(frameWidth * 0.12);
+    const actionRowY = panelTopY + Math.round(panelHeight * 0.72) - 32;
+    const actionGap = Math.round(frameWidth * 0.18);
 
     this.settingsTitle = this.add
       .text(panelX, titleY, "Cài đặt", {
@@ -266,66 +266,105 @@ export class UIScene extends Phaser.Scene {
     this.speedMin = 1;
     this.speedMax = 3;
     this.speedStep = 0.05;
-    this.speedSliderTrackWidth = Math.round(230 * sliderScale);
+    const hasSpeedTrackTexture = this.textures.exists("ui-speed-slider-track");
+    const hasSpeedKnobTexture = this.textures.exists("ui-speed-slider-knob");
+    if (hasSpeedTrackTexture) {
+      this.textures
+        .get("ui-speed-slider-track")
+        ?.setFilter?.(Phaser.Textures.FilterMode.NEAREST);
+    }
+    if (hasSpeedKnobTexture) {
+      this.textures
+        .get("ui-speed-slider-knob")
+        ?.setFilter?.(Phaser.Textures.FilterMode.NEAREST);
+    }
+    this.speedSliderTrackWidth = Math.round(300 * sliderScale);
     this.speedSliderY = sliderY;
+    const speedTrackHeight = hasSpeedTrackTexture
+      ? this.getImageHeightByWidth(
+          "ui-speed-slider-track",
+          this.speedSliderTrackWidth,
+        )
+      : Math.round(8 * sliderScale);
+    const speedKnobWidth = Math.round(58 * sliderScale);
+    const speedKnobHeight = hasSpeedKnobTexture
+      ? this.getImageHeightByWidth("ui-speed-slider-knob", speedKnobWidth)
+      : Math.round(20 * sliderScale);
+    this.speedSliderKnobOffsetX = Math.round(speedKnobWidth * 0.08);
+    this.speedSliderKnobOffsetY = -2;
+    const speedSliderEdgePadding = Math.round(speedKnobWidth * 0.24);
+    const speedLabelOffsetY = Math.max(
+      Math.round(18 * sliderScale),
+      Math.round(speedTrackHeight * 0.55),
+    );
 
-    this.speedSliderTrack = this.add
+    if (hasSpeedTrackTexture) {
+      this.speedSliderTrack = this.add
+        .image(panelX, this.speedSliderY, "ui-speed-slider-track")
+        .setDisplaySize(this.speedSliderTrackWidth, speedTrackHeight)
+        .setDepth(221)
+        .setVisible(false);
+    } else {
+      this.speedSliderTrack = this.add
+        .rectangle(
+          panelX,
+          this.speedSliderY,
+          this.speedSliderTrackWidth,
+          Math.round(8 * sliderScale),
+          0x14181d,
+          0.95,
+        )
+        .setOrigin(0.5)
+        .setStrokeStyle(1, 0x7a6d57, 0.95)
+        .setDepth(221)
+        .setVisible(false);
+    }
+
+    if (hasSpeedKnobTexture) {
+      this.speedSliderKnob = this.add
+        .image(
+          panelX + this.speedSliderKnobOffsetX,
+          this.speedSliderY + this.speedSliderKnobOffsetY,
+          "ui-speed-slider-knob",
+        )
+        .setDisplaySize(speedKnobWidth, speedKnobHeight)
+        .setDepth(223)
+        .setAlpha(1)
+        .setVisible(false)
+        .setInteractive({ useHandCursor: true });
+    } else {
+      this.speedSliderKnob = this.add
+        .circle(
+          panelX + this.speedSliderKnobOffsetX,
+          this.speedSliderY + this.speedSliderKnobOffsetY,
+          Math.round(10 * sliderScale),
+          0xf0e5c9,
+          1,
+        )
+        .setStrokeStyle(2, 0x2b2f34, 0.95)
+        .setDepth(223)
+        .setAlpha(1)
+        .setVisible(false)
+        .setInteractive({ useHandCursor: true });
+    }
+
+    this.speedSliderKnobGrabZone = this.add
       .rectangle(
-        panelX,
-        this.speedSliderY,
-        this.speedSliderTrackWidth,
-        Math.round(8 * sliderScale),
-        0x14181d,
-        0.95,
-      )
-      .setOrigin(0.5)
-      .setStrokeStyle(1, 0x7a6d57, 0.95)
-      .setDepth(221)
-      .setVisible(false);
-
-    this.speedSliderFill = this.add
-      .rectangle(
-        panelX - this.speedSliderTrackWidth * 0.5,
-        this.speedSliderY,
-        this.speedSliderTrackWidth,
-        Math.round(10 * sliderScale),
-        0x66cc7c,
-        0.95,
-      )
-      .setOrigin(0, 0.5)
-      .setDepth(222)
-      .setVisible(false);
-
-    this.speedSliderKnob = this.add
-      .circle(
-        panelX,
-        this.speedSliderY,
-        Math.round(10 * sliderScale),
-        0xf0e5c9,
-        1,
-      )
-      .setStrokeStyle(2, 0x2b2f34, 0.95)
-      .setDepth(223)
-      .setVisible(false)
-      .setInteractive({ useHandCursor: true });
-
-    this.speedSliderHitArea = this.add
-      .rectangle(
-        panelX,
-        this.speedSliderY,
-        this.speedSliderTrackWidth + Math.round(44 * sliderScale),
-        Math.round(30 * sliderScale),
+        panelX + this.speedSliderKnobOffsetX,
+        this.speedSliderY + this.speedSliderKnobOffsetY,
+        Math.max(Math.round(44 * sliderScale), speedKnobWidth * 1.3),
+        Math.max(Math.round(44 * sliderScale), speedKnobHeight * 1.3),
         0xffffff,
         0.001,
       )
-      .setDepth(220)
+      .setDepth(224)
       .setVisible(false)
       .setInteractive({ useHandCursor: true });
 
     this.speedMinLabel = this.add
       .text(
         panelX - this.speedSliderTrackWidth * 0.5,
-        this.speedSliderY + Math.round(18 * sliderScale),
+        this.speedSliderY + speedLabelOffsetY,
         "1x",
         {
           fontFamily: "Verdana",
@@ -343,7 +382,7 @@ export class UIScene extends Phaser.Scene {
     this.speedMaxLabel = this.add
       .text(
         panelX + this.speedSliderTrackWidth * 0.5,
-        this.speedSliderY + Math.round(18 * sliderScale),
+        this.speedSliderY + speedLabelOffsetY,
         "3x",
         {
           fontFamily: "Verdana",
@@ -372,14 +411,20 @@ export class UIScene extends Phaser.Scene {
       .setVisible(false);
 
     this.speedSliderDragging = false;
-    this.speedSliderTrackLeftX = panelX - this.speedSliderTrackWidth * 0.5;
-    this.speedSliderTrackRightX = panelX + this.speedSliderTrackWidth * 0.5;
+    this.speedSliderTrackLeftX =
+      panelX - this.speedSliderTrackWidth * 0.5 + speedSliderEdgePadding;
+    this.speedSliderTrackRightX =
+      panelX + this.speedSliderTrackWidth * 0.5 - speedSliderEdgePadding;
+    this.speedSliderActiveWidth = Math.max(
+      1,
+      this.speedSliderTrackRightX - this.speedSliderTrackLeftX,
+    );
 
-    this.speedSliderHitArea.on("pointerdown", (pointer) => {
+    this.speedSliderKnob.on("pointerdown", (pointer) => {
       this.speedSliderDragging = true;
       this.updateSpeedFromPointer(pointer, false);
     });
-    this.speedSliderKnob.on("pointerdown", (pointer) => {
+    this.speedSliderKnobGrabZone.on("pointerdown", (pointer) => {
       this.speedSliderDragging = true;
       this.updateSpeedFromPointer(pointer, false);
     });
@@ -388,39 +433,108 @@ export class UIScene extends Phaser.Scene {
 
     this.fullscreenMenuItem = null;
 
-    this.exitMenuItem = this.add
-      .text(panelX + actionGap, actionRowY, "Thoát", {
-        fontFamily: "Verdana",
-        fontSize: `${Math.round(18 * textScale)}px`,
-        color: "#b44a58",
-        fontStyle: "bold",
-        stroke: "#ffe6ea",
-        strokeThickness: 1,
-      })
-      .setOrigin(0.5)
-      .setDepth(221)
-      .setVisible(false)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerover", () => this.exitMenuItem.setScale(1.06))
-      .on("pointerout", () => this.exitMenuItem.setScale(1))
-      .on("pointerdown", this.exitToHome, this);
+    const registerSettingsActionHover = (target) => {
+      if (!target) {
+        return;
+      }
 
-    this.restartMenuItem = this.add
-      .text(panelX - actionGap, actionRowY, "Chơi lại", {
-        fontFamily: "Verdana",
-        fontSize: `${Math.round(16 * textScale)}px`,
-        color: "#2f9b54",
-        fontStyle: "bold",
-        stroke: "#e7f7ea",
-        strokeThickness: 1,
-      })
-      .setOrigin(0.5)
-      .setDepth(221)
-      .setVisible(false)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerover", () => this.restartMenuItem.setScale(1.06))
-      .on("pointerout", () => this.restartMenuItem.setScale(1))
-      .on("pointerdown", this.restartFromMenu, this);
+      const baseScaleX = target.scaleX || 1;
+      const baseScaleY = target.scaleY || 1;
+      const setHoverScale = () =>
+        target.setScale(baseScaleX * 1.06, baseScaleY * 1.06);
+      const setPressScale = () =>
+        target.setScale(baseScaleX * 1.02, baseScaleY * 1.02);
+      const setBaseScale = () => target.setScale(baseScaleX, baseScaleY);
+
+      target
+        .on("pointerover", setHoverScale)
+        .on("pointerout", setBaseScale)
+        .on("pointerdown", setPressScale)
+        .on("pointerup", setHoverScale);
+    };
+
+    const hasExitButtonTexture = this.textures.exists("menu-button-exit");
+    const hasRestartButtonTexture = this.textures.exists(
+      "menu-button-play-again",
+    );
+    if (hasExitButtonTexture) {
+      this.textures
+        .get("menu-button-exit")
+        ?.setFilter?.(Phaser.Textures.FilterMode.NEAREST);
+    }
+    if (hasRestartButtonTexture) {
+      this.textures
+        .get("menu-button-play-again")
+        ?.setFilter?.(Phaser.Textures.FilterMode.NEAREST);
+    }
+    const restartButtonWidth = Math.round(frameWidth * 0.3);
+    const exitButtonWidth = Math.round(frameWidth * 0.28);
+
+    if (hasExitButtonTexture) {
+      this.exitMenuItem = this.add
+        .image(panelX + actionGap, actionRowY, "menu-button-exit")
+        .setDisplaySize(
+          exitButtonWidth,
+          this.getImageHeightByWidth("menu-button-exit", exitButtonWidth),
+        )
+        .setOrigin(0.5)
+        .setDepth(221)
+        .setAlpha(1)
+        .setVisible(false)
+        .setInteractive({ useHandCursor: true })
+        .on("pointerdown", this.exitToHome, this);
+    } else {
+      this.exitMenuItem = this.add
+        .text(panelX + actionGap, actionRowY, "Thoát", {
+          fontFamily: "Verdana",
+          fontSize: `${Math.round(18 * textScale)}px`,
+          color: "#b44a58",
+          fontStyle: "bold",
+          stroke: "#ffe6ea",
+          strokeThickness: 1,
+        })
+        .setOrigin(0.5)
+        .setDepth(221)
+        .setVisible(false)
+        .setInteractive({ useHandCursor: true })
+        .on("pointerdown", this.exitToHome, this);
+    }
+
+    if (hasRestartButtonTexture) {
+      this.restartMenuItem = this.add
+        .image(panelX - actionGap, actionRowY, "menu-button-play-again")
+        .setDisplaySize(
+          restartButtonWidth,
+          this.getImageHeightByWidth(
+            "menu-button-play-again",
+            restartButtonWidth,
+          ),
+        )
+        .setOrigin(0.5)
+        .setDepth(221)
+        .setAlpha(1)
+        .setVisible(false)
+        .setInteractive({ useHandCursor: true })
+        .on("pointerdown", this.restartFromMenu, this);
+    } else {
+      this.restartMenuItem = this.add
+        .text(panelX - actionGap, actionRowY, "Chơi lại", {
+          fontFamily: "Verdana",
+          fontSize: `${Math.round(16 * textScale)}px`,
+          color: "#2f9b54",
+          fontStyle: "bold",
+          stroke: "#e7f7ea",
+          strokeThickness: 1,
+        })
+        .setOrigin(0.5)
+        .setDepth(221)
+        .setVisible(false)
+        .setInteractive({ useHandCursor: true })
+        .on("pointerdown", this.restartFromMenu, this);
+    }
+
+    registerSettingsActionHover(this.exitMenuItem);
+    registerSettingsActionHover(this.restartMenuItem);
 
     this.settingsButtonBg.on(
       "pointerdown",
@@ -492,8 +606,7 @@ export class UIScene extends Phaser.Scene {
       inside(this.settingsSubtitle) ||
       inside(this.speedSubtitle) ||
       inside(this.speedSliderTrack) ||
-      inside(this.speedSliderFill) ||
-      inside(this.speedSliderHitArea) ||
+      inside(this.speedSliderKnobGrabZone) ||
       inside(this.speedSliderKnob) ||
       inside(this.speedValueText) ||
       inside(this.restartMenuItem) ||
@@ -540,7 +653,7 @@ export class UIScene extends Phaser.Scene {
       this.speedSliderTrackRightX,
     );
     const ratio = Phaser.Math.Clamp(
-      (clampedX - this.speedSliderTrackLeftX) / this.speedSliderTrackWidth,
+      (clampedX - this.speedSliderTrackLeftX) / this.speedSliderActiveWidth,
       0,
       1,
     );
@@ -555,13 +668,16 @@ export class UIScene extends Phaser.Scene {
       this.speedMax,
     );
     const ratio = (safeSpeed - this.speedMin) / (this.speedMax - this.speedMin);
-    const knobX =
-      this.speedSliderTrackLeftX + ratio * this.speedSliderTrackWidth;
-    this.speedSliderKnob.x = knobX;
-    this.speedSliderFill.width = Math.max(
-      0,
-      knobX - this.speedSliderTrackLeftX,
+    const knobBaseX =
+      this.speedSliderTrackLeftX + ratio * this.speedSliderActiveWidth;
+    const knobX = Math.round(knobBaseX + (this.speedSliderKnobOffsetX ?? 0));
+    const knobY = Math.round(
+      this.speedSliderY + (this.speedSliderKnobOffsetY ?? 0),
     );
+    this.speedSliderKnob.x = knobX;
+    this.speedSliderKnob.y = knobY;
+    this.speedSliderKnobGrabZone.x = knobX;
+    this.speedSliderKnobGrabZone.y = knobY;
     this.speedValueText.setText(
       `${safeSpeed.toFixed(2).replace(/\.00$/, "")}x`,
     );
@@ -601,14 +717,13 @@ export class UIScene extends Phaser.Scene {
     this.settingsTitle.setVisible(visible);
     this.speedSubtitle.setVisible(visible);
     this.speedSliderTrack.setVisible(visible);
-    this.speedSliderFill.setVisible(visible);
     this.speedSliderKnob.setVisible(visible);
-    this.speedSliderHitArea.setVisible(visible);
+    this.speedSliderKnobGrabZone.setVisible(visible);
     this.speedMinLabel.setVisible(visible);
     this.speedMaxLabel.setVisible(visible);
     this.speedValueText.setVisible(visible);
     setInputEnabled(this.settingsBackdrop, visible);
-    setInputEnabled(this.speedSliderHitArea, visible);
+    setInputEnabled(this.speedSliderKnobGrabZone, visible);
     setInputEnabled(this.speedSliderKnob, visible);
     setInputEnabled(this.restartMenuItem, visible);
     setInputEnabled(this.exitMenuItem, visible);
